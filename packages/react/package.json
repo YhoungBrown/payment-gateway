@@ -26,7 +26,7 @@
     "react-dom": ">=18.0.0"
   },
   "dependencies": {
-    "@org/payment-gateway-core": "0.1.0"
+    "@org/payment-gateway-core": "file:../core"
   },
   "devDependencies": {
     "@testing-library/react": "^16.0.0",
