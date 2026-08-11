@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { PaymentGatewayProvider, usePayment, usePaymentProcessors } from '../index';
 import type { PaymentGatewayConfig, PaymentRequest } from '../index';
 
@@ -85,17 +85,22 @@ describe('usePayment', () => {
       wrapper: flutterwaveWrapper,
     });
 
-    const payPromise = result.current.pay();
+    let payPromise: Promise<PaymentResponse>;
+    act(() => {
+      payPromise = result.current.pay();
+    });
 
     await waitFor(() => expect(result.current.isProcessing).toBe(true));
 
-    // Simulate callback navigation
-    Object.defineProperty(mockPopup.location, 'href', {
-      value: 'https://example.com/callback?status=successful&tx_ref=REF-123&transaction_id=TRX-456',
-      writable: true,
+    // Simulate callback navigation and await resolution inside act
+    const response = await act(async () => {
+      Object.defineProperty(mockPopup.location, 'href', {
+        value: 'https://example.com/callback?status=successful&tx_ref=REF-123&transaction_id=TRX-456',
+        writable: true,
+      });
+      return payPromise;
     });
 
-    const response = await payPromise;
     expect(response.status).toBe('success');
     expect(response.reference).toBe('REF-123');
   });
@@ -119,7 +124,9 @@ describe('usePayment', () => {
       wrapper: customWrapper,
     });
 
-    result.current.pay();
+    act(() => {
+      result.current.pay();
+    });
 
     await waitFor(() => expect(result.current.isSelecting).toBe(true));
   });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import {
   PaymentGatewayProvider,
   usePayment,
@@ -52,7 +52,9 @@ describe('usePayment', () => {
   it('should render CheckoutView when pay() is called', async () => {
     const { result } = renderHook(() => usePayment(baseRequest), { wrapper });
 
-    result.current.pay();
+    act(() => {
+      result.current.pay();
+    });
 
     await waitFor(() => {
       expect(result.current.isProcessing).toBe(true);
@@ -79,7 +81,9 @@ describe('usePayment', () => {
       wrapper: customWrapper,
     });
 
-    result.current.pay();
+    act(() => {
+      result.current.pay();
+    });
 
     await waitFor(() => expect(result.current.isSelecting).toBe(true));
   });

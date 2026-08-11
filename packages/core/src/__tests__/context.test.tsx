@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { PaymentGatewayProvider, usePaymentContext } from '../context';
 import type { PaymentGatewayConfig, PaymentRequest } from '../types';
 
@@ -100,7 +100,7 @@ describe('PaymentGatewayProvider', () => {
         <TestConsumer />
       </PaymentGatewayProvider>
     );
-    screen.getByText('Pay').click();
+    fireEvent.click(screen.getByText('Pay'));
     await waitFor(() =>
       expect(screen.getByTestId('status').textContent).toBe('done')
     );
@@ -121,12 +121,12 @@ describe('PaymentGatewayProvider', () => {
       </PaymentGatewayProvider>
     );
 
-    screen.getByText('Pay').click();
+    fireEvent.click(screen.getByText('Pay'));
     await waitFor(() =>
       expect(screen.getByTestId('status').textContent).toBe('selecting')
     );
 
-    screen.getByText('Select Flutterwave').click();
+    fireEvent.click(screen.getByText('Select Flutterwave'));
     await waitFor(() =>
       expect(screen.getByTestId('status').textContent).toBe('done')
     );
