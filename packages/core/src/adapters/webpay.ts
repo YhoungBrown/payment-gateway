@@ -16,10 +16,11 @@ export class WebpayAdapter implements PaymentAdapter {
     initialize?: (
       request: PaymentRequest,
       processor: ProcessorConfig
-    ) => Promise<InitializeResult>
+    ) => Promise<InitializeResult | undefined>
   ): Promise<InitializeResult> {
     if (initialize) {
-      return initialize(request, processor);
+      const result = await initialize(request, processor);
+      if (result) return result;
     }
 
     const { endpoint, productId, payItemId, macKey, callbackUrl } = processor;

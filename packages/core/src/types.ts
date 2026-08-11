@@ -51,7 +51,7 @@ export interface PaymentGatewayConfig {
   initialize?: (
     request: PaymentRequest,
     processor: ProcessorConfig
-  ) => Promise<InitializeResult>;
+  ) => Promise<InitializeResult | undefined>;
   verify?: (response: PaymentResponse) => Promise<VerificationResult>;
 }
 

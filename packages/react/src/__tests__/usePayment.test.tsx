@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { PaymentGatewayProvider, usePayment, usePaymentProcessors } from '../index';
-import type { PaymentGatewayConfig, PaymentRequest } from '../index';
+import type { PaymentGatewayConfig, PaymentRequest, PaymentResponse } from '../index';
 
 const baseRequest: PaymentRequest = {
   amount: 10000,

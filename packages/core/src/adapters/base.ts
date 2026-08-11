@@ -12,7 +12,7 @@ export interface PaymentAdapter {
     initialize?: (
       request: PaymentRequest,
       processor: ProcessorConfig
-    ) => Promise<InitializeResult>
+    ) => Promise<InitializeResult | undefined>
   ): Promise<InitializeResult>;
   parseCallback(url: string, processor: ProcessorConfig): PaymentResponse;
 }

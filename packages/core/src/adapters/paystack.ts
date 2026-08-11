@@ -15,10 +15,11 @@ export class PaystackAdapter implements PaymentAdapter {
     initialize?: (
       request: PaymentRequest,
       processor: ProcessorConfig
-    ) => Promise<InitializeResult>
+    ) => Promise<InitializeResult | undefined>
   ): Promise<InitializeResult> {
     if (initialize) {
-      return initialize(request, processor);
+      const result = await initialize(request, processor);
+      if (result) return result;
     }
     throw new CheckoutInitializationError(
       'Paystack checkout requires an initialize callback because initialization must happen server-side with a secret key.'
