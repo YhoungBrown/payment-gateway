@@ -114,7 +114,7 @@ interface ProcessorConfig {
   id: string;
   type: ProcessorType;
   isDefault?: boolean;
-  publicKey: string;
+  publicKey?: string;    // Optional for backend-driven processors (Paystack, Flutterwave)
   callbackUrl: string;
   cancelUrl?: string;
   endpoint?: string;     // Checkout endpoint, required for Webpay client-side mode

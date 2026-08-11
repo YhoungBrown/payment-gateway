@@ -45,14 +45,12 @@ const config = {
     {
       id: 'flutterwave-1',
       type: 'flutterwave' as const,
-      publicKey: 'pk_test_xxx',
       callbackUrl: 'https://yourapp.com/callback',
       isDefault: true,
     },
     {
       id: 'paystack-1',
       type: 'paystack' as const,
-      publicKey: 'pk_test_xxx',
       callbackUrl: 'https://yourapp.com/callback',
     },
   ],
@@ -130,7 +128,6 @@ const config = {
     {
       id: 'flutterwave-1',
       type: 'flutterwave' as const,
-      publicKey: 'pk_test_xxx',
       callbackUrl: 'https://yourapp.com/callback',
       isDefault: true,
     },
@@ -199,7 +196,6 @@ const config = {
     {
       id: 'webpay-1',
       type: 'webpay' as const,
-      publicKey: 'not-used',
       callbackUrl: 'https://yourapp.com/callback',
       endpoint: 'https://your-webpay-endpoint.com/webpay/pay',
       productId: 'YOUR_PRODUCT_ID',
@@ -233,7 +229,6 @@ const config = {
     {
       id: 'paystack-1',
       type: 'paystack' as const,
-      publicKey: 'pk_test_xxx',
       callbackUrl: 'https://yourapp.com/callback',
       isDefault: true,
     },
@@ -258,20 +253,17 @@ const config = {
     {
       id: 'paystack-1',
       type: 'paystack' as const,
-      publicKey: 'pk_test_xxx',
       callbackUrl: 'https://yourapp.com/callback',
       isDefault: true,
     },
     {
       id: 'flutterwave-1',
       type: 'flutterwave' as const,
-      publicKey: 'pk_test_xxx',
       callbackUrl: 'https://yourapp.com/callback',
     },
     {
       id: 'webpay-1',
       type: 'webpay' as const,
-      publicKey: 'not-used',
       callbackUrl: 'https://yourapp.com/callback',
       endpoint: 'https://your-webpay-endpoint.com/webpay/pay',
       productId: 'YOUR_PRODUCT_ID',

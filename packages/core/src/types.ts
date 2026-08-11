@@ -10,7 +10,7 @@ export interface ProcessorConfig {
   id: string;
   type: ProcessorType;
   isDefault?: boolean;
-  publicKey: string;
+  publicKey?: string;
   callbackUrl: string;
   cancelUrl?: string;
   endpoint?: string;
