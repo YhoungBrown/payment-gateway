@@ -1,0 +1,126 @@
+import React from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { renderHook, waitFor } from '@testing-library/react';
+import { PaymentGatewayProvider, usePayment, usePaymentProcessors } from '../index';
+import type { PaymentGatewayConfig, PaymentRequest } from '../index';
+
+const baseRequest: PaymentRequest = {
+  amount: 10000,
+  currency: 'NGN',
+  reference: 'REF-123',
+  email: 'test@example.com',
+};
+
+const baseConfig: PaymentGatewayConfig = {
+  processors: [
+    {
+      id: 'paystack-1',
+      type: 'paystack',
+      publicKey: 'pk_test',
+      callbackUrl: 'https://example.com/callback',
+      isDefault: true,
+    },
+    {
+      id: 'flutterwave-1',
+      type: 'flutterwave',
+      publicKey: 'pk_test',
+      callbackUrl: 'https://example.com/callback',
+    },
+  ],
+  initialize: async () => ({
+    checkoutUrl: 'https://checkout.example.com',
+  }),
+};
+
+const wrapper = ({ children }: { children: React.ReactNode }) => (
+  <PaymentGatewayProvider config={baseConfig}>{children}</PaymentGatewayProvider>
+);
+
+describe('usePaymentProcessors', () => {
+  it('should expose configured processors and default', () => {
+    const { result } = renderHook(() => usePaymentProcessors(), { wrapper });
+    expect(result.current.processors).toHaveLength(2);
+    expect(result.current.defaultProcessor?.id).toBe('paystack-1');
+  });
+});
+
+describe('usePayment', () => {
+  let originalOpen: typeof window.open;
+
+  beforeEach(() => {
+    originalOpen = window.open;
+  });
+
+  afterEach(() => {
+    window.open = originalOpen;
+  });
+
+  it('should initiate default processor when pay() is called', async () => {
+    const flutterwaveDefaultConfig: PaymentGatewayConfig = {
+      ...baseConfig,
+      processors: [
+        { ...baseConfig.processors[0], isDefault: false },
+        { ...baseConfig.processors[1], isDefault: true },
+      ],
+    };
+
+    const flutterwaveWrapper = ({ children }: { children: React.ReactNode }) => (
+      <PaymentGatewayProvider config={flutterwaveDefaultConfig}>
+        {children}
+      </PaymentGatewayProvider>
+    );
+    const mockPopup = {
+      location: { href: 'https://checkout.example.com' },
+      closed: false,
+      close: vi.fn(),
+      document: {
+        createElement: document.createElement.bind(document),
+        body: document.createElement('body'),
+      },
+    } as unknown as Window;
+
+    window.open = vi.fn().mockReturnValue(mockPopup);
+
+    const { result } = renderHook(() => usePayment(baseRequest), {
+      wrapper: flutterwaveWrapper,
+    });
+
+    const payPromise = result.current.pay();
+
+    await waitFor(() => expect(result.current.isProcessing).toBe(true));
+
+    // Simulate callback navigation
+    Object.defineProperty(mockPopup.location, 'href', {
+      value: 'https://example.com/callback?status=successful&tx_ref=REF-123&transaction_id=TRX-456',
+      writable: true,
+    });
+
+    const response = await payPromise;
+    expect(response.status).toBe('success');
+    expect(response.reference).toBe('REF-123');
+  });
+
+  it('should show selector when no default is configured', async () => {
+    const configWithoutDefault: PaymentGatewayConfig = {
+      ...baseConfig,
+      processors: [
+        { ...baseConfig.processors[0], isDefault: false },
+        baseConfig.processors[1],
+      ],
+    };
+
+    const customWrapper = ({ children }: { children: React.ReactNode }) => (
+      <PaymentGatewayProvider config={configWithoutDefault}>
+        {children}
+      </PaymentGatewayProvider>
+    );
+
+    const { result } = renderHook(() => usePayment(baseRequest), {
+      wrapper: customWrapper,
+    });
+
+    result.current.pay();
+
+    await waitFor(() => expect(result.current.isSelecting).toBe(true));
+  });
+});

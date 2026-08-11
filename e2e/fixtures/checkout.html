@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Checkout</title>
+</head>
+<body>
+  <h1>Mock Processor Checkout</h1>
+  <button id="success" data-testid="success-button">Pay Now</button>
+  <button id="cancel" data-testid="cancel-button">Cancel</button>
+  <script>
+    document.getElementById('success').addEventListener('click', () => {
+      window.location.href = '/e2e/fixtures/callback?status=successful&tx_ref=E2E-REF-123&transaction_id=TRX-456';
+    });
+
+    document.getElementById('cancel').addEventListener('click', () => {
+      window.location.href = '/e2e/fixtures/callback?status=cancelled&tx_ref=E2E-REF-123';
+    });
+  </script>
+</body>
+</html>
