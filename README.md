@@ -295,6 +295,37 @@ const config = {
 3. If `verify` is configured, the package calls it and waits for `{ verified: true }` before returning `success`.
 4. If `verify` returns `{ verified: false }`, the package returns `status: 'failed'` with the verification message.
 
+## Callback URL matching
+
+The `callbackUrl` you set in `ProcessorConfig` must match the callback URL configured on your backend/processor. The SDK watches the checkout WebView/popup for navigation to this URL.
+
+| Processor | Who sets the callback URL | Where to configure |
+|-----------|---------------------------|-------------------|
+| Paystack | Your backend | Set in backend and pass the same value to `ProcessorConfig.callbackUrl`. |
+| Flutterwave | Your backend | Set in backend and pass the same value to `ProcessorConfig.callbackUrl`. |
+| Webpay | Your backend or client | Set `ProcessorConfig.callbackUrl` to the same URL passed as `site_redirect_url`. |
+
+If the URLs do not match, the SDK will not detect the payment completion.
+
+## Metadata
+
+You can attach arbitrary business data to a payment via the `metadata` field on `PaymentRequest`:
+
+```ts
+const request: PaymentRequest = {
+  amount: 10000,
+  currency: 'NGN',
+  reference: 'ORDER-123',
+  email: 'customer@example.com',
+  metadata: {
+    orderId: 'ORDER-123',
+    customerId: 'CUST-456',
+  },
+};
+```
+
+Your backend receives `request.metadata` in the `initialize` callback and can forward it to the processor.
+
 ## Scripts
 
 ```bash
