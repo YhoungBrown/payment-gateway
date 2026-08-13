@@ -1,3 +1,5 @@
+import type { ReactElement } from 'react';
+
 export type ProcessorType = 'paystack' | 'flutterwave' | 'webpay';
 
 export interface VerificationResult {
@@ -45,6 +47,12 @@ export interface InitializeResult {
   postData?: Record<string, string>;
 }
 
+export interface CheckoutOptions {
+  presentationStyle?: 'fullScreen' | 'pageSheet' | 'formSheet' | 'overFullScreen';
+  backgroundColor?: string;
+  renderLoading?: () => ReactElement;
+}
+
 export interface PaymentGatewayConfig {
   processors: ProcessorConfig[];
   debug?: boolean;
@@ -53,6 +61,7 @@ export interface PaymentGatewayConfig {
     processor: ProcessorConfig
   ) => Promise<InitializeResult | undefined>;
   verify?: (response: PaymentResponse) => Promise<VerificationResult>;
+  checkoutOptions?: CheckoutOptions;
 }
 
 export interface UsePaymentResult {

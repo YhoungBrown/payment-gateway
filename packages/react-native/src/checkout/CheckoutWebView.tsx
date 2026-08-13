@@ -1,10 +1,15 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
-import WebViewBase from 'react-native-webview';
-import type { WebViewProps } from 'react-native-webview';
-import type { WebViewNavigation, WebViewSource } from 'react-native-webview/lib/WebViewTypes';
+import { WebView } from 'react-native-webview';
+import type {
+  WebViewErrorEvent,
+  WebViewHttpErrorEvent,
+  WebViewNavigation,
+  WebViewSource,
+} from 'react-native-webview/lib/WebViewTypes';
 import {
   getAdapter,
+  usePaymentContext,
   type InitializeResult,
   type PaymentResponse,
   type ProcessorConfig,
@@ -23,13 +28,23 @@ export function CheckoutWebView({
   onComplete,
   onCancel,
 }: CheckoutWebViewProps) {
-  const WebView = WebViewBase as React.ComponentType<WebViewProps>;
+  const { config } = usePaymentContext();
+  const checkoutOptions = config.checkoutOptions;
+  const renderLoading = checkoutOptions?.renderLoading;
+  const hasCustomLoading = !!renderLoading;
 
-  const handleNavigationStateChange = useCallback(
-    (event: WebViewNavigation) => {
-      const url = event.url;
-      if (!url) return;
+  const [isLoading, setIsLoading] = useState(true);
 
+  const handleLoadStart = useCallback(() => {
+    setIsLoading(true);
+  }, []);
+
+  const handleLoadEnd = useCallback(() => {
+    setIsLoading(false);
+  }, []);
+
+  const handleCallbackUrl = useCallback(
+    (url: string) => {
       if (processor.cancelUrl && url.startsWith(processor.cancelUrl)) {
         onCancel();
         return;
@@ -44,6 +59,65 @@ export function CheckoutWebView({
     [processor, onComplete, onCancel]
   );
 
+  const handleShouldStartLoadWithRequest = useCallback(
+    (event: WebViewNavigation) => {
+      const url = event.url;
+      if (!url) return true;
+
+      const isCancelUrl =
+        processor.cancelUrl && url.startsWith(processor.cancelUrl);
+      const isCallbackUrl = url.startsWith(processor.callbackUrl);
+
+      if (isCancelUrl || isCallbackUrl) {
+        handleCallbackUrl(url);
+        return false;
+      }
+
+      return true;
+    },
+    [processor, handleCallbackUrl]
+  );
+
+  const handleNavigationStateChange = useCallback(
+    (event: WebViewNavigation) => {
+      const url = event.url;
+      if (!url) return;
+      handleCallbackUrl(url);
+    },
+    [handleCallbackUrl]
+  );
+
+  const handleError = useCallback(
+    (event: WebViewErrorEvent) => {
+      const description =
+        (event.nativeEvent as any)?.description ||
+        'WebView failed to load checkout';
+      onComplete({
+        status: 'failed',
+        reference: '',
+        processor: processor.type,
+        message: description,
+      });
+    },
+    [processor, onComplete]
+  );
+
+  const handleHttpError = useCallback(
+    (event: WebViewHttpErrorEvent) => {
+      const nativeEvent = event.nativeEvent as any;
+      const description =
+        nativeEvent?.description ||
+        `HTTP error ${nativeEvent?.statusCode || ''}`;
+      onComplete({
+        status: 'failed',
+        reference: '',
+        processor: processor.type,
+        message: description,
+      });
+    },
+    [processor, onComplete]
+  );
+
   const source: WebViewSource =
     result.method === 'POST' && result.postData
       ? {
@@ -56,22 +130,44 @@ export function CheckoutWebView({
         }
       : { uri: result.checkoutUrl };
 
+  // presentationStyle is iOS-only; it has no effect on Android.
+  const modalProps: Record<string, unknown> = {};
+  if (checkoutOptions?.presentationStyle) {
+    modalProps.presentationStyle = checkoutOptions.presentationStyle;
+  }
+
+  const containerStyle = [
+    styles.container,
+    checkoutOptions?.backgroundColor
+      ? { backgroundColor: checkoutOptions.backgroundColor }
+      : undefined,
+  ];
+
   return (
-    <Modal transparent={false} animationType="slide" onRequestClose={onCancel}>
-      <View style={styles.container}>
+    <Modal
+      transparent={false}
+      animationType="slide"
+      onRequestClose={onCancel}
+      {...modalProps}
+    >
+      <View style={containerStyle}>
         <WebView
           source={source}
+          style={styles.webView}
+          onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
           onNavigationStateChange={handleNavigationStateChange}
-          onError={() =>
-            onComplete({
-              status: 'failed',
-              reference: '',
-              processor: processor.type,
-              message: 'WebView failed to load checkout',
-            })
+          onError={handleError}
+          onHttpError={handleHttpError}
+          onLoadStart={handleLoadStart}
+          onLoadEnd={handleLoadEnd}
+          startInLoadingState={!hasCustomLoading}
+          renderLoading={
+            hasCustomLoading ? () => <View style={styles.transparent} /> : undefined
           }
-          startInLoadingState
         />
+        {hasCustomLoading && isLoading && renderLoading && (
+          <View style={styles.overlay}>{renderLoading()}</View>
+        )}
       </View>
     </Modal>
   );
@@ -80,5 +176,15 @@ export function CheckoutWebView({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  webView: {
+    flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  transparent: {
+    flex: 1,
+    backgroundColor: 'transparent',
   },
 });

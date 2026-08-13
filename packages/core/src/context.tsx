@@ -139,13 +139,19 @@ export function PaymentGatewayProvider({
 
       if (config.verify) {
         const verification = await config.verify(response);
-        finalResponse = verification.verified
-          ? response
-          : {
-              ...response,
-              status: 'failed',
-              message: verification.message || 'Verification failed',
-            };
+        if (verification.verified) {
+          finalResponse = {
+            ...response,
+            status: response.status === 'pending' ? 'success' : response.status,
+            message: verification.message || response.message,
+          };
+        } else {
+          finalResponse = {
+            ...response,
+            status: 'failed',
+            message: verification.message || 'Verification failed',
+          };
+        }
       }
 
       dispatch({

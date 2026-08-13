@@ -27,7 +27,6 @@ export function usePayment(request: PaymentRequest) {
 
   const finalizeCheckout = useCallback((response: PaymentResponse) => {
     setCheckoutResult(null);
-    setLastResponse(response);
     resolverRef.current?.resolve(response);
     resolverRef.current = null;
   }, []);
@@ -46,6 +45,7 @@ export function usePayment(request: PaymentRequest) {
       processor: processor?.type || 'paystack',
       message: 'Checkout cancelled',
     };
+    setLastResponse(response);
     finalizeCheckout(response);
   }, [processor, finalizeCheckout]);
 
@@ -64,6 +64,7 @@ export function usePayment(request: PaymentRequest) {
       try {
         setLastError(null);
         const response = await paymentPromise;
+        setLastResponse(response);
         return response;
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));

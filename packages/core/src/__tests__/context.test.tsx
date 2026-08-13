@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
+import { useState } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { PaymentGatewayProvider, usePaymentContext } from '../context';
-import type { PaymentGatewayConfig, PaymentRequest } from '../types';
+import type { PaymentGatewayConfig, PaymentRequest, PaymentResponse } from '../types';
 
 const TestConsumer = () => {
   const { state, pay, selectProcessor, cancelSelection } = usePaymentContext();
@@ -129,6 +130,99 @@ describe('PaymentGatewayProvider', () => {
     fireEvent.click(screen.getByText('Select Flutterwave'));
     await waitFor(() =>
       expect(screen.getByTestId('status').textContent).toBe('done')
+    );
+  });
+
+  it('should promote pending status to success when verification succeeds', async () => {
+    const verify = vi.fn().mockResolvedValue({ verified: true, message: 'Verified by backend' });
+
+    const VerifyConsumer = () => {
+      const { pay } = usePaymentContext();
+      const [result, setResult] = useState<PaymentResponse | null>(null);
+      return (
+        <div>
+          <button
+            onClick={async () => {
+              const response = await pay(baseRequest, async () => ({
+                status: 'pending' as const,
+                reference: 'REF-PENDING',
+                processor: 'paystack' as const,
+              }));
+              setResult(response);
+            }}
+          >
+            Pay Pending
+          </button>
+          {result && <div data-testid="result-status">{result.status}</div>}
+          {result && <div data-testid="result-message">{result.message}</div>}
+        </div>
+      );
+    };
+
+    const configWithVerify: PaymentGatewayConfig = {
+      ...baseConfig,
+      verify,
+    };
+
+    render(
+      <PaymentGatewayProvider config={configWithVerify}>
+        <VerifyConsumer />
+      </PaymentGatewayProvider>
+    );
+
+    fireEvent.click(screen.getByText('Pay Pending'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('result-status').textContent).toBe('success')
+    );
+    expect(screen.getByTestId('result-message').textContent).toBe(
+      'Verified by backend'
+    );
+    expect(verify).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'pending', reference: 'REF-PENDING' })
+    );
+  });
+
+  it('should keep a non-pending status when verification succeeds', async () => {
+    const verify = vi.fn().mockResolvedValue({ verified: true });
+
+    const VerifyConsumer = () => {
+      const { pay } = usePaymentContext();
+      const [result, setResult] = useState<PaymentResponse | null>(null);
+      return (
+        <div>
+          <button
+            onClick={async () => {
+              const response = await pay(baseRequest, async () => ({
+                status: 'failed' as const,
+                reference: 'REF-FAILED',
+                processor: 'paystack' as const,
+              }));
+              setResult(response);
+            }}
+          >
+            Pay Failed
+          </button>
+          {result && <div data-testid="result-status">{result.status}</div>}
+        </div>
+      );
+    };
+
+    const configWithVerify: PaymentGatewayConfig = {
+      ...baseConfig,
+      verify,
+    };
+
+    render(
+      <PaymentGatewayProvider config={configWithVerify}>
+        <VerifyConsumer />
+      </PaymentGatewayProvider>
+    );
+
+    fireEvent.click(screen.getByText('Pay Failed'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('result-status').textContent).toBe('failed')
     );
   });
 });
