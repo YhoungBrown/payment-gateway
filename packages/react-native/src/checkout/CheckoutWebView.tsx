@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import type {
@@ -31,17 +31,22 @@ export function CheckoutWebView({
   const { config } = usePaymentContext();
   const checkoutOptions = config.checkoutOptions;
   const renderLoading = checkoutOptions?.renderLoading;
-  const hasCustomLoading = !!renderLoading;
 
-  const [isLoading, setIsLoading] = useState(true);
-
-  const handleLoadStart = useCallback(() => {
-    setIsLoading(true);
-  }, []);
-
-  const handleLoadEnd = useCallback(() => {
-    setIsLoading(false);
-  }, []);
+  const renderLoadingComponent = useMemo(() => {
+    if (!renderLoading) return undefined;
+    return () => (
+      <View
+        style={[
+          styles.loadingWrapper,
+          checkoutOptions?.backgroundColor
+            ? { backgroundColor: checkoutOptions.backgroundColor }
+            : undefined,
+        ]}
+      >
+        {renderLoading()}
+      </View>
+    );
+  }, [renderLoading, checkoutOptions?.backgroundColor]);
 
   const handleCallbackUrl = useCallback(
     (url: string) => {
@@ -158,16 +163,9 @@ export function CheckoutWebView({
           onNavigationStateChange={handleNavigationStateChange}
           onError={handleError}
           onHttpError={handleHttpError}
-          onLoadStart={handleLoadStart}
-          onLoadEnd={handleLoadEnd}
-          startInLoadingState={!hasCustomLoading}
-          renderLoading={
-            hasCustomLoading ? () => <View style={styles.transparent} /> : undefined
-          }
+          startInLoadingState
+          renderLoading={renderLoadingComponent}
         />
-        {hasCustomLoading && isLoading && renderLoading && (
-          <View style={styles.overlay}>{renderLoading()}</View>
-        )}
       </View>
     </Modal>
   );
@@ -180,11 +178,7 @@ const styles = StyleSheet.create({
   webView: {
     flex: 1,
   },
-  overlay: {
+  loadingWrapper: {
     ...StyleSheet.absoluteFillObject,
-  },
-  transparent: {
-    flex: 1,
-    backgroundColor: 'transparent',
   },
 });

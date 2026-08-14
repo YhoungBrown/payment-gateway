@@ -10,12 +10,16 @@ import {
 import type { ProcessorConfig } from '@org/payment-gateway-core';
 import { DefaultProcessorItem } from './components/DefaultProcessorItem';
 
+export type PaymentProcessorSelectorPresentation = 'modal' | 'fullscreen';
+
 interface PaymentProcessorSelectorProps {
   open: boolean;
   processors: ProcessorConfig[];
   onSelect: (processorId: string) => void;
   onCancel: () => void;
   title?: string;
+  presentation?: PaymentProcessorSelectorPresentation;
+  backgroundColor?: string;
   renderItem?: (props: {
     processor: ProcessorConfig;
     onSelect: () => void;
@@ -28,8 +32,21 @@ export function PaymentProcessorSelector({
   onSelect,
   onCancel,
   title = 'Select a payment method',
+  presentation = 'modal',
+  backgroundColor = '#fff',
   renderItem,
 }: PaymentProcessorSelectorProps) {
+  const isFullscreen = presentation === 'fullscreen';
+
+  const overlayStyle = isFullscreen
+    ? styles.overlayFullscreen
+    : styles.overlayModal;
+
+  const containerStyle = [
+    isFullscreen ? styles.containerFullscreen : styles.containerModal,
+    { backgroundColor },
+  ];
+
   return (
     <Modal
       visible={open}
@@ -37,8 +54,8 @@ export function PaymentProcessorSelector({
       animationType="slide"
       onRequestClose={onCancel}
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
+      <View style={overlayStyle}>
+        <View style={containerStyle}>
           <Text style={styles.title}>{title}</Text>
           <ScrollView>
             {processors.map((processor) =>
@@ -68,19 +85,28 @@ export function PaymentProcessorSelector({
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  overlayModal: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
-  container: {
-    backgroundColor: '#fff',
+  overlayFullscreen: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+  },
+  containerModal: {
     borderRadius: 12,
     padding: 20,
     width: '100%',
     maxHeight: '80%',
+  },
+  containerFullscreen: {
+    flex: 1,
+    padding: 20,
+    width: '100%',
   },
   title: {
     fontSize: 18,
