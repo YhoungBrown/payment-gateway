@@ -186,6 +186,97 @@ function Checkout() {
 }
 ```
 
+## Class component support (React Native)
+
+Hooks can only be used inside function components. If your screen is a class component, wrap it with `withPaymentGateway` instead.
+
+`withPaymentGateway` is a higher-order component that injects the same values returned by `usePayment` and `usePaymentProcessors` as props.
+
+### Usage
+
+```tsx
+import React, { Component } from 'react';
+import { View, Button, Text } from 'react-native';
+import {
+  PaymentGatewayProvider,
+  withPaymentGateway,
+  PaymentProcessorSelector,
+  type WithPaymentGatewayProps,
+} from '@org/payment-gateway-react-native';
+
+class CheckoutScreen extends Component<WithPaymentGatewayProps> {
+  render() {
+    const {
+      pay,
+      selectProcessor,
+      cancelSelection,
+      isProcessing,
+      isSelecting,
+      response,
+      error,
+      CheckoutView,
+      processors,
+    } = this.props;
+
+    return (
+      <View>
+        <Button
+          title={isProcessing ? 'Processing...' : 'Pay'}
+          onPress={() => pay()}
+          disabled={isProcessing}
+        />
+        {error && <Text>Error: {error.message}</Text>}
+        {response && <Text>Status: {response.status}</Text>}
+        {CheckoutView}
+        <PaymentProcessorSelector
+          open={isSelecting}
+          processors={processors}
+          onSelect={selectProcessor}
+          onCancel={cancelSelection}
+        />
+      </View>
+    );
+  }
+}
+
+const CheckoutScreenWithGateway = withPaymentGateway(CheckoutScreen);
+
+function App() {
+  const request = {
+    amount: 10000,
+    currency: 'NGN',
+    reference: 'ORDER-123',
+    email: 'customer@example.com',
+  };
+
+  return (
+    <PaymentGatewayProvider config={config}>
+      <CheckoutScreenWithGateway request={request} />
+    </PaymentGatewayProvider>
+  );
+}
+```
+
+### Injected props
+
+`withPaymentGateway` injects everything from `usePayment` and `usePaymentProcessors`:
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `pay` | `() => Promise<PaymentResponse>` | Starts the payment flow. |
+| `selectProcessor` | `(processorId: string) => Promise<PaymentResponse>` | Selects a processor when no default is set. |
+| `cancelSelection` | `() => void` | Cancels the processor selector. |
+| `isProcessing` | `boolean` | True while initializing, processing, or verifying. |
+| `isSelecting` | `boolean` | True when the user needs to pick a processor. |
+| `response` | `PaymentResponse \| undefined` | Final payment response after completion. |
+| `error` | `Error \| null` | Last error, if any. |
+| `CheckoutView` | `React.ReactNode` | Render this to show the checkout WebView. |
+| `reset` | `() => void` | Resets the payment state. |
+| `processors` | `ProcessorConfig[]` | All configured processors. |
+| `defaultProcessor` | `ProcessorConfig \| undefined` | The processor marked as default, if any. |
+
+The wrapped component must receive a `request` prop of type `PaymentRequest`.
+
 ## Interswitch Webpay client-side checkout
 
 Webpay can be initialized client-side when you supply the checkout endpoint, product ID, pay item ID, and MAC key. This is useful for backend-free integrations or sandbox testing.
