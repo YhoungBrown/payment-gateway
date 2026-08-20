@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import type {
@@ -9,7 +9,6 @@ import type {
 } from 'react-native-webview/lib/WebViewTypes';
 import {
   getAdapter,
-  usePaymentContext,
   type InitializeResult,
   type PaymentResponse,
   type ProcessorConfig,
@@ -28,26 +27,6 @@ export function CheckoutWebView({
   onComplete,
   onCancel,
 }: CheckoutWebViewProps) {
-  const { config } = usePaymentContext();
-  const checkoutOptions = config.checkoutOptions;
-  const renderLoading = checkoutOptions?.renderLoading;
-
-  const renderLoadingComponent = useMemo(() => {
-    if (!renderLoading) return undefined;
-    return () => (
-      <View
-        style={[
-          styles.loadingWrapper,
-          checkoutOptions?.backgroundColor
-            ? { backgroundColor: checkoutOptions.backgroundColor }
-            : undefined,
-        ]}
-      >
-        {renderLoading()}
-      </View>
-    );
-  }, [renderLoading, checkoutOptions?.backgroundColor]);
-
   const handleCallbackUrl = useCallback(
     (url: string) => {
       if (processor.cancelUrl && url.startsWith(processor.cancelUrl)) {
@@ -135,27 +114,13 @@ export function CheckoutWebView({
         }
       : { uri: result.checkoutUrl };
 
-  // presentationStyle is iOS-only; it has no effect on Android.
-  const modalProps: Record<string, unknown> = {};
-  if (checkoutOptions?.presentationStyle) {
-    modalProps.presentationStyle = checkoutOptions.presentationStyle;
-  }
-
-  const containerStyle = [
-    styles.container,
-    checkoutOptions?.backgroundColor
-      ? { backgroundColor: checkoutOptions.backgroundColor }
-      : undefined,
-  ];
-
   return (
     <Modal
       transparent={false}
       animationType="slide"
       onRequestClose={onCancel}
-      {...modalProps}
     >
-      <View style={containerStyle}>
+      <View style={styles.container}>
         <WebView
           source={source}
           style={styles.webView}
@@ -164,7 +129,7 @@ export function CheckoutWebView({
           onError={handleError}
           onHttpError={handleHttpError}
           startInLoadingState
-          renderLoading={renderLoadingComponent}
+          renderLoading={() => <View style={styles.transparentLoading} />}
         />
       </View>
     </Modal>
@@ -178,7 +143,8 @@ const styles = StyleSheet.create({
   webView: {
     flex: 1,
   },
-  loadingWrapper: {
+  transparentLoading: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
   },
 });
