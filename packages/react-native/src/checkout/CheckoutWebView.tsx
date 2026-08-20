@@ -129,7 +129,6 @@ export function CheckoutWebView({
           onError={handleError}
           onHttpError={handleHttpError}
           startInLoadingState
-          renderLoading={() => <View style={styles.transparentLoading} />}
         />
       </View>
     </Modal>
@@ -142,9 +141,5 @@ const styles = StyleSheet.create({
   },
   webView: {
     flex: 1,
-  },
-  transparentLoading: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'transparent',
   },
 });
