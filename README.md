@@ -165,7 +165,7 @@ function Checkout() {
     email: 'customer@example.com',
   };
 
-  const { pay, isProcessing, isSelecting, response, error, CheckoutView, selectProcessor, cancelSelection } =
+  const { pay, isProcessing, isSelecting, response, error, CheckoutView, selectProcessor, cancelSelection, activeProcessorId } =
     usePayment(request);
   const { processors } = usePaymentProcessors();
 
@@ -176,10 +176,13 @@ function Checkout() {
       {response && <Text>Status: {response.status}</Text>}
       {CheckoutView}
       <PaymentProcessorSelector
-        open={isSelecting}
+        open={isSelecting || isProcessing}
         processors={processors}
         onSelect={selectProcessor}
         onCancel={cancelSelection}
+        isProcessing={isProcessing}
+        activeProcessorId={activeProcessorId}
+        activityIndicatorColor="#007AFF"
       />
     </View>
   );
@@ -212,6 +215,7 @@ class CheckoutScreen extends Component<WithPaymentGatewayProps> {
       cancelSelection,
       isProcessing,
       isSelecting,
+      activeProcessorId,
       response,
       error,
       CheckoutView,
@@ -229,10 +233,13 @@ class CheckoutScreen extends Component<WithPaymentGatewayProps> {
         {response && <Text>Status: {response.status}</Text>}
         {CheckoutView}
         <PaymentProcessorSelector
-          open={isSelecting}
+          open={isSelecting || isProcessing}
           processors={processors}
           onSelect={selectProcessor}
           onCancel={cancelSelection}
+          isProcessing={isProcessing}
+          activeProcessorId={activeProcessorId}
+          activityIndicatorColor="#007AFF"
         />
       </View>
     );
@@ -257,6 +264,55 @@ function App() {
 }
 ```
 
+### Keeping the selector open during initialization
+
+When a user selects a processor, the SDK enters a `processor_selected` state while it fetches the checkout URL from your backend. During this time:
+
+- `isSelecting` stays `true` so the selector remains visible.
+- `isProcessing` becomes `true` so the selected processor shows a loading indicator.
+
+Use `open={isSelecting || isProcessing}` on `PaymentProcessorSelector` so the modal stays open until the checkout WebView is ready to take over.
+
+### Custom selector row with `renderItem`
+
+You can keep the SDK's modal and backdrop while customizing only the processor row:
+
+```tsx
+<PaymentProcessorSelector
+  open={isSelecting || isProcessing}
+  processors={processors}
+  onSelect={selectProcessor}
+  onCancel={cancelSelection}
+  isProcessing={isProcessing}
+  activeProcessorId={activeProcessorId}
+  activityIndicatorColor="#007AFF"
+  renderItem={({ processor, onSelect, isLoading }) => (
+    <TouchableOpacity onPress={onSelect} disabled={isLoading}>
+      <Text style={{ opacity: isLoading ? 0.6 : 1 }}>
+        {processor.type.toUpperCase()}
+      </Text>
+      {isLoading && <ActivityIndicator color="#007AFF" />}
+    </TouchableOpacity>
+  )}
+/>
+```
+
+### Fully custom selector
+
+If you build your own selector component, pass `activeProcessorId` and `isProcessing` to it so it can show the loading state:
+
+```tsx
+{isSelecting && (
+  <CustomProcessorSelector
+    processors={processors}
+    onSelect={selectProcessor}
+    onCancel={cancelSelection}
+    activeProcessorId={activeProcessorId}
+    isProcessing={isProcessing}
+  />
+)}
+```
+
 ### Injected props
 
 `withPaymentGateway` injects everything from `usePayment` and `usePaymentProcessors`:
@@ -266,8 +322,9 @@ function App() {
 | `pay` | `() => Promise<PaymentResponse>` | Starts the payment flow. |
 | `selectProcessor` | `(processorId: string) => Promise<PaymentResponse>` | Selects a processor when no default is set. |
 | `cancelSelection` | `() => void` | Cancels the processor selector. |
-| `isProcessing` | `boolean` | True while initializing, processing, or verifying. |
-| `isSelecting` | `boolean` | True when the user needs to pick a processor. |
+| `isProcessing` | `boolean` | True while initializing, processor selection, processing, or verifying. |
+| `isSelecting` | `boolean` | True when the user needs to pick a processor or while the selected processor is initializing. |
+| `activeProcessorId` | `string \| undefined` | The processor currently being initialized/used. |
 | `response` | `PaymentResponse \| undefined` | Final payment response after completion. |
 | `error` | `Error \| null` | Last error, if any. |
 | `CheckoutView` | `React.ReactNode` | Render this to show the checkout WebView. |

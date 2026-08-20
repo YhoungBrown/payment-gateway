@@ -9,6 +9,7 @@ export interface PaymentState {
       | 'idle'
       | 'initializing'
       | 'selecting'
+      | 'processor_selected'
       | 'processing'
       | 'verifying'
       | 'done'
@@ -54,7 +55,7 @@ export function paymentReducer(
       return {
         ...state,
         activeProcessorId: action.payload.processorId,
-        transaction: { status: 'processing' },
+        transaction: { status: 'processor_selected' },
       };
     case 'CANCEL_SELECTION':
       return {

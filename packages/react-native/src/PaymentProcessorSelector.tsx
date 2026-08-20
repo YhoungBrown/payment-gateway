@@ -20,9 +20,13 @@ interface PaymentProcessorSelectorProps {
   title?: string;
   presentation?: PaymentProcessorSelectorPresentation;
   backgroundColor?: string;
+  isProcessing?: boolean;
+  activeProcessorId?: string;
+  activityIndicatorColor?: string;
   renderItem?: (props: {
     processor: ProcessorConfig;
     onSelect: () => void;
+    isLoading: boolean;
   }) => React.ReactNode;
 }
 
@@ -34,6 +38,9 @@ export function PaymentProcessorSelector({
   title = 'Select a payment method',
   presentation = 'modal',
   backgroundColor = '#fff',
+  isProcessing = false,
+  activeProcessorId,
+  activityIndicatorColor,
   renderItem,
 }: PaymentProcessorSelectorProps) {
   const isFullscreen = presentation === 'fullscreen';
@@ -58,12 +65,16 @@ export function PaymentProcessorSelector({
         <View style={containerStyle}>
           <Text style={styles.title}>{title}</Text>
           <ScrollView>
-            {processors.map((processor) =>
-              renderItem ? (
+            {processors.map((processor) => {
+              const isLoading =
+                isProcessing && processor.id === activeProcessorId;
+
+              return renderItem ? (
                 <View key={processor.id}>
                   {renderItem({
                     processor,
                     onSelect: () => onSelect(processor.id),
+                    isLoading,
                   })}
                 </View>
               ) : (
@@ -71,9 +82,11 @@ export function PaymentProcessorSelector({
                   key={processor.id}
                   processor={processor}
                   onSelect={() => onSelect(processor.id)}
+                  isLoading={isLoading}
+                  activityIndicatorColor={activityIndicatorColor}
                 />
-              )
-            )}
+              );
+            })}
           </ScrollView>
           <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
             <Text style={styles.cancelText}>Cancel</Text>

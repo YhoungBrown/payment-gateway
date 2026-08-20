@@ -25,7 +25,7 @@ describe('paymentReducer', () => {
       { ...initialState, processors: [processor] },
       { type: 'SELECT_PROCESSOR', payload: { processorId: processor.id } }
     );
-    expect(state.transaction.status).toBe('processing');
+    expect(state.transaction.status).toBe('processor_selected');
     expect(state.activeProcessorId).toBe(processor.id);
   });
 

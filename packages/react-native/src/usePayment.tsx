@@ -114,9 +114,13 @@ export function usePayment(request: PaymentRequest) {
       CheckoutView,
       isProcessing:
         state.transaction.status === 'initializing' ||
+        state.transaction.status === 'processor_selected' ||
         state.transaction.status === 'processing' ||
         state.transaction.status === 'verifying',
-      isSelecting: state.transaction.status === 'selecting',
+      isSelecting:
+        state.transaction.status === 'selecting' ||
+        state.transaction.status === 'processor_selected',
+      activeProcessorId: state.activeProcessorId,
       response: lastResponse,
       error: lastError,
       reset,
@@ -127,6 +131,7 @@ export function usePayment(request: PaymentRequest) {
       cancelSelection,
       CheckoutView,
       state.transaction.status,
+      state.activeProcessorId,
       lastResponse,
       lastError,
       reset,

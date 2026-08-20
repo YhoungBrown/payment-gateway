@@ -70,6 +70,7 @@ export interface UsePaymentResult {
   cancelSelection: () => void;
   isProcessing: boolean;
   isSelecting: boolean;
+  activeProcessorId?: string;
   error: Error | null;
   reset: () => void;
 }
