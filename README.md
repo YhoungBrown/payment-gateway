@@ -1,6 +1,6 @@
 # @org/payment-gateway
 
-A TypeScript monorepo payment package for React and React Native. It abstracts Paystack, Flutterwave, and Interswitch Webpay behind a single `pay()` API.
+A TypeScript monorepo payment package for React and React Native. It abstracts Paystack, Flutterwave, and Interswitch behind a single `pay()` API.
 
 ## Packages
 
@@ -336,27 +336,29 @@ If you build your own selector component, pass `activeProcessorId` and `isProces
 
 The wrapped component must receive a `request` prop of type `PaymentRequest`.
 
-## Interswitch Webpay client-side checkout
+## Interswitch Web Checkout client-side initialization
 
-Webpay can be initialized client-side when you supply the checkout endpoint, product ID, pay item ID, and MAC key. This is useful for backend-free integrations or sandbox testing.
+The Interswitch adapter builds a client-side POST form. You must obtain the checkout endpoint, `merchantCode`, and `payItemId` from your Interswitch account.
 
 ```ts
 const config = {
   processors: [
     {
-      id: 'webpay-1',
-      type: 'webpay' as const,
-      callbackUrl: 'https://yourapp.com/callback',
-      endpoint: 'https://your-webpay-endpoint.com/webpay/pay',
-      productId: 'YOUR_PRODUCT_ID',
+      id: 'interswitch-1',
+      type: 'interswitch' as const,
+      callbackUrl: 'https://yourapp.com/payment-response',
+      endpoint: 'https://<interswitch-checkout-host>/collections/w/pay',
+      merchantCode: 'YOUR_MERCHANT_CODE',
       payItemId: 'YOUR_PAY_ITEM_ID',
-      macKey: 'YOUR_MAC_KEY',
+      payItemName: 'Your Product Name', // optional
     },
   ],
 };
 ```
 
-For production, consider moving the MAC key to your backend and using the `initialize` callback instead.
+> Do not hardcode Interswitch URLs in your SDK config. Use the endpoint provided by Interswitch for your environment (sandbox or production).
+
+You should always provide a `verify` callback to requery the transaction on your backend before fulfilling the order.
 
 ## Verification
 
@@ -412,13 +414,13 @@ const config = {
       callbackUrl: 'https://yourapp.com/callback',
     },
     {
-      id: 'webpay-1',
-      type: 'webpay' as const,
-      callbackUrl: 'https://yourapp.com/callback',
-      endpoint: 'https://your-webpay-endpoint.com/webpay/pay',
-      productId: 'YOUR_PRODUCT_ID',
+      id: 'interswitch-1',
+      type: 'interswitch' as const,
+      callbackUrl: 'https://yourapp.com/payment-response',
+      endpoint: 'https://<interswitch-checkout-host>/collections/w/pay',
+      merchantCode: 'YOUR_MERCHANT_CODE',
       payItemId: 'YOUR_PAY_ITEM_ID',
-      macKey: 'YOUR_MAC_KEY',
+      payItemName: 'Your Product Name',
     },
   ],
   verify: async (response) => {
@@ -427,8 +429,8 @@ const config = {
         return verifyOnBackend('/api/payments/verify/paystack', response.reference);
       case 'flutterwave':
         return verifyOnBackend('/api/payments/verify/flutterwave', response.processorReference);
-      case 'webpay':
-        return verifyOnBackend('/api/payments/verify/webpay', response.reference);
+      case 'interswitch':
+        return verifyOnBackend('/api/payments/verify/interswitch', response.reference);
       default:
         // Only reachable if you add a processor type without updating verify.
         // If you do not need verification, omit verify entirely.
@@ -453,7 +455,7 @@ The `callbackUrl` you set in `ProcessorConfig` must match the callback URL confi
 |-----------|---------------------------|-------------------|
 | Paystack | Your backend | Set in backend and pass the same value to `ProcessorConfig.callbackUrl`. |
 | Flutterwave | Your backend | Set in backend and pass the same value to `ProcessorConfig.callbackUrl`. |
-| Webpay | Your backend or client | Set `ProcessorConfig.callbackUrl` to the same URL passed as `site_redirect_url`. |
+| Interswitch | Your backend or client | Set `ProcessorConfig.callbackUrl` to the same URL passed as `site_redirect_url`. |
 
 If the URLs do not match, the SDK will not detect the payment completion.
 
