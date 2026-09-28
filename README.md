@@ -27,7 +27,19 @@ npm install @org/payment-gateway-react-native
 Peer dependencies:
 
 - React web: `react`, `react-dom`
-- React Native: `react`, `react-native`, `react-native-webview`
+- React Native: `react`, `react-native`, `react-native-webview`, `react-native-inappbrowser-reborn`
+
+### React Native setup
+
+Install the peer dependencies in your app and run the native build steps:
+
+```bash
+npm install react-native-inappbrowser-reborn react-native-webview
+# iOS only
+npx pod-install
+```
+
+> Do not skip these. They are peer dependencies, not bundled dependencies. Bundling them would create duplicate native modules and build failures.
 
 ## React usage
 
@@ -358,11 +370,115 @@ const config = {
 
 > Do not hardcode Interswitch URLs in your SDK config. Use the endpoint provided by Interswitch for your environment (sandbox or production).
 
-You should always provide a `verify` callback to requery the transaction on your backend before fulfilling the order.
+### React Native browser checkout
+
+In React Native, the Interswitch checkout is opened in the device browser (`react-native-inappbrowser-reborn`) instead of a WebView. This avoids anti-bot/cookie-banner issues that can block the WebView.
+
+Because mobile browsers cannot reliably submit a POST form directly, your backend must provide a form-proxy endpoint. The SDK calls your `initialize` callback, which returns a GET URL pointing to that endpoint. When the browser loads the page, the backend renders a self-submitting POST form that submits to Interswitch.
+
+> **The `/interswitch-form` endpoint is only needed if you configure Interswitch as a processor.** If your app only uses Paystack or Flutterwave, you can skip this endpoint and use the SDK's standard initialization flow.
+
+#### Backend form-proxy example
+
+Your backend must expose two endpoints for Interswitch:
+
+1. `POST /initialize` — returns the form-proxy URL.
+2. `GET /interswitch-form` — serves the auto-submitting POST form.
+
+```js
+// POST /initialize
+app.post('/initialize', async (req, res) => {
+  const { request, processor } = req.body;
+
+  if (processor.type === 'paystack') {
+    // existing Paystack initialize logic
+    return res.json({ checkoutUrl: authorizationUrl, method: 'GET' });
+  }
+
+  if (processor.type === 'interswitch') {
+    const params = new URLSearchParams({
+      endpoint: processor.endpoint,
+      merchant_code: processor.merchantCode,
+      pay_item_id: processor.payItemId,
+      site_redirect_url: processor.callbackUrl,
+      txn_ref: request.reference,
+      amount: String(request.amount),
+      currency: mapCurrencyToNumeric(request.currency), // e.g. NGN -> 566
+      cust_name: request.email,
+      cust_id: request.email,
+      ...(processor.payItemName ? { pay_item_name: processor.payItemName } : {}),
+    });
+
+    const origin = `${req.protocol}://${req.get('host')}`;
+    return res.json({
+      checkoutUrl: `${origin}/interswitch-form?${params.toString()}`,
+      method: 'GET',
+    });
+  }
+
+  return res.status(400).json({ error: 'Unsupported processor' });
+});
+
+// GET /interswitch-form
+app.get('/interswitch-form', (req, res) => {
+  const { endpoint, ...fields } = req.query;
+
+  const inputs = Object.entries(fields)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([name, value]) => {
+      const escapedName = String(name).replace(/"/g, '&quot;');
+      const escapedValue = String(value).replace(/"/g, '&quot;');
+      return `<input type="hidden" name="${escapedName}" value="${escapedValue}" />`;
+    })
+    .join('\n  ');
+
+  const escapedEndpoint = String(endpoint).replace(/"/g, '&quot;');
+
+  res.set('Content-Type', 'text/html');
+  res.send(`<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /></head>
+<body>
+  <p>Redirecting to payment gateway...</p>
+  <form id="isw-form" method="post" action="${escapedEndpoint}">
+    ${inputs}
+  </form>
+  <script>document.getElementById('isw-form').submit();</script>
+</body>
+</html>`);
+});
+```
+
+#### Browser checkout behavior
+
+By default, the SDK renders checkout inside a WebView. For Interswitch, the SDK opens the checkout URL in the device browser (`react-native-inappbrowser-reborn`) instead.
+
+**Android**: The browser watches for navigation to the processor's `callbackUrl`. When Interswitch redirects there after payment, the browser closes automatically and the SDK reports `pending`, which triggers your `verify` callback.
+
+**iOS**: The browser does not auto-close on redirect. The user must close it manually. Once closed, the SDK reports `pending` and triggers your `verify` callback.
+
+This is why a `verify` callback is **required** for Interswitch in React Native — Interswitch only returns a transaction reference in the browser redirect and explicitly recommends requerying their verification endpoint before concluding that a payment was successful.
+
+#### Browser options
+
+You can customize the browser toolbar via `browserOptions` in your config:
+
+```ts
+const config = {
+  processors: [...],
+  browserOptions: {
+    toolbarColor: '#007AFF',
+    showTitle: true,
+    enableUrlBarHiding: true,
+  },
+};
+```
 
 ## Verification
 
-The `verify` callback is optional. If you do not provide it, the SDK trusts the status returned in the processor callback URL.
+The `verify` callback is optional for Paystack and Flutterwave. If you do not provide it, the SDK trusts the status returned in the processor callback URL.
+
+For **Interswitch in React Native, `verify` is required**. Interswitch only returns a transaction reference in the browser redirect and explicitly recommends requerying their verification endpoint before concluding that a payment was successful.
 
 ### No verification
 
@@ -430,6 +546,8 @@ const config = {
       case 'flutterwave':
         return verifyOnBackend('/api/payments/verify/flutterwave', response.processorReference);
       case 'interswitch':
+        // Your backend should call Interswitch's requery endpoint:
+        // GET https://sandbox.interswitchng.com/collections/api/v1/gettransaction.json?merchantcode={merchantcode}&transactionreference={reference}&amount={amount}
         return verifyOnBackend('/api/payments/verify/interswitch', response.reference);
       default:
         // Only reachable if you add a processor type without updating verify.
@@ -442,10 +560,11 @@ const config = {
 
 ### Verification flow
 
-1. The user completes payment in a popup (web) or WebView (React Native).
-2. The package parses the callback URL into a `PaymentResponse`.
+1. The user completes payment in a popup (web), WebView (React Native Paystack/Flutterwave), or browser (React Native Interswitch).
+2. The package parses the callback URL into a `PaymentResponse` (WebView/popup) or reports `pending` (Interswitch browser).
 3. If `verify` is configured, the package calls it and waits for `{ verified: true }` before returning `success`.
 4. If `verify` returns `{ verified: false }`, the package returns `status: 'failed'` with the verification message.
+5. For Interswitch in React Native without `verify`, closing the browser returns `status: 'cancelled'` because the SDK cannot confirm the outcome.
 
 ## Callback URL matching
 
@@ -455,7 +574,8 @@ The `callbackUrl` you set in `ProcessorConfig` must match the callback URL confi
 |-----------|---------------------------|-------------------|
 | Paystack | Your backend | Set in backend and pass the same value to `ProcessorConfig.callbackUrl`. |
 | Flutterwave | Your backend | Set in backend and pass the same value to `ProcessorConfig.callbackUrl`. |
-| Interswitch | Your backend or client | Set `ProcessorConfig.callbackUrl` to the same URL passed as `site_redirect_url`. |
+| Interswitch (WebView/popup) | Your backend or client | Set `ProcessorConfig.callbackUrl` to the same URL passed as `site_redirect_url`. |
+| Interswitch (React Native browser) | Client | Set `ProcessorConfig.callbackUrl` to the URL Interswitch should redirect to after payment. The SDK uses it to detect completion inside the browser session. |
 
 If the URLs do not match, the SDK will not detect the payment completion.
 

@@ -6,9 +6,10 @@ import {
   type PaymentResponse,
 } from '@org/payment-gateway-core';
 import { CheckoutWebView } from './checkout/CheckoutWebView';
+import { CheckoutBrowser } from './checkout/CheckoutBrowser';
 
 export function usePayment(request: PaymentRequest) {
-  const { state, pay, selectProcessor, cancelSelection } = usePaymentContext();
+  const { state, pay, selectProcessor, cancelSelection, config } = usePaymentContext();
   const [checkoutResult, setCheckoutResult] = useState<InitializeResult | null>(null);
   const [lastResponse, setLastResponse] = useState<PaymentResponse | undefined>();
   const [lastError, setLastError] = useState<Error | null>(null);
@@ -96,6 +97,23 @@ export function usePayment(request: PaymentRequest) {
   const CheckoutView = useMemo(() => {
     if (!checkoutResult || !processor) return null;
 
+    if (processor.type === 'interswitch') {
+      console.log('[usePayment] Using CheckoutBrowser for Interswitch');
+      return (
+        <CheckoutBrowser
+          result={checkoutResult}
+          processor={processor}
+          reference={request.reference}
+          debug={config.debug}
+          verifyHookProvided={!!config.verify}
+          browserOptions={config.browserOptions}
+          onComplete={handleComplete}
+          onCancel={handleCancel}
+        />
+      );
+    }
+
+    console.log('[usePayment] Using CheckoutWebView for', processor.type);
     return (
       <CheckoutWebView
         result={checkoutResult}
@@ -104,7 +122,15 @@ export function usePayment(request: PaymentRequest) {
         onCancel={handleCancel}
       />
     );
-  }, [checkoutResult, processor, handleComplete, handleCancel]);
+  }, [
+    checkoutResult,
+    processor,
+    request.reference,
+    config.debug,
+    config.verify,
+    handleComplete,
+    handleCancel,
+  ]);
 
   return useMemo(
     () => ({
