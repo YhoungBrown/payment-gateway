@@ -23,3 +23,5 @@ Thumbs.db
 
 # Example backend (kept local, can be deployed to Vercel separately)
 example-backend/
+
+.vercel

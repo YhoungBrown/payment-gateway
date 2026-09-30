@@ -25,7 +25,8 @@
   "peerDependencies": {
     "react": ">=18.0.0",
     "react-native": ">=0.72.0",
-    "react-native-webview": ">=13.0.0"
+    "react-native-webview": ">=13.0.0",
+    "react-native-inappbrowser-reborn": ">=3.0.0"
   },
   "dependencies": {
     "@org/payment-gateway-core": "file:../core"
@@ -35,10 +36,11 @@
     "@testing-library/dom": "^10.0.0",
     "@types/react": "^18.3.0",
     "jsdom": "^24.0.0",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0",
-    "react-native": "^0.74.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-native": "0.74.7",
     "react-native-webview": "^13.0.0",
+    "react-native-inappbrowser-reborn": "^3.7.0",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0",
     "vitest": "^2.0.0"
