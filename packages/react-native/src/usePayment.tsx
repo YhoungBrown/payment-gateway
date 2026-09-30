@@ -8,7 +8,7 @@ import {
 import { CheckoutWebView } from './checkout/CheckoutWebView';
 
 export function usePayment(request: PaymentRequest) {
-  const { state, pay, selectProcessor, cancelSelection } = usePaymentContext();
+  const { state, pay, selectProcessor, cancelSelection, config } = usePaymentContext();
   const [checkoutResult, setCheckoutResult] = useState<InitializeResult | null>(null);
   const [lastResponse, setLastResponse] = useState<PaymentResponse | undefined>();
   const [lastError, setLastError] = useState<Error | null>(null);
@@ -96,6 +96,7 @@ export function usePayment(request: PaymentRequest) {
   const CheckoutView = useMemo(() => {
     if (!checkoutResult || !processor) return null;
 
+    console.log('[usePayment] Using CheckoutWebView for', processor.type);
     return (
       <CheckoutWebView
         result={checkoutResult}
@@ -104,7 +105,15 @@ export function usePayment(request: PaymentRequest) {
         onCancel={handleCancel}
       />
     );
-  }, [checkoutResult, processor, handleComplete, handleCancel]);
+  }, [
+    checkoutResult,
+    processor,
+    request.reference,
+    config.debug,
+    config.verify,
+    handleComplete,
+    handleCancel,
+  ]);
 
   return useMemo(
     () => ({

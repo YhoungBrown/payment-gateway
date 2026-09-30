@@ -1,4 +1,4 @@
-export type ProcessorType = 'paystack' | 'flutterwave' | 'webpay';
+export type ProcessorType = 'paystack' | 'flutterwave' | 'interswitch';
 
 export interface VerificationResult {
   verified: boolean;
@@ -16,9 +16,9 @@ export interface ProcessorConfig {
   endpoint?: string;
   subaccount?: string;
   splitCode?: string;
-  productId?: string;
+  merchantCode?: string;
   payItemId?: string;
-  macKey?: string;
+  payItemName?: string;
 }
 
 export interface PaymentRequest {

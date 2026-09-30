@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PaystackAdapter, FlutterwaveAdapter, WebpayAdapter } from '../adapters';
+import { PaystackAdapter, FlutterwaveAdapter, InterswitchAdapter } from '../adapters';
 import type { PaymentRequest, ProcessorConfig } from '../types';
 
 const baseRequest: PaymentRequest = {
@@ -77,38 +77,50 @@ describe('FlutterwaveAdapter', () => {
   });
 });
 
-describe('WebpayAdapter', () => {
-  const adapter = new WebpayAdapter();
-  const webpayProcessor: ProcessorConfig = {
+describe('InterswitchAdapter', () => {
+  const adapter = new InterswitchAdapter();
+  const interswitchProcessor: ProcessorConfig = {
     ...baseProcessor,
-    type: 'webpay',
-    endpoint: 'https://sandbox.interswitchng.com/webpay/pay',
-    productId: 'PROD-123',
-    payItemId: 'ITEM-123',
-    macKey: 'MAC-SECRET',
+    type: 'interswitch',
+    endpoint: 'https://sandbox.interswitchng.com/collections/w/pay',
+    merchantCode: 'MX6072',
+    payItemId: '9405967',
+    payItemName: 'Test Item',
   };
 
   it('should build a POST checkout without initialize callback', async () => {
-    const result = await adapter.initializeCheckout(baseRequest, webpayProcessor);
+    const result = await adapter.initializeCheckout(baseRequest, interswitchProcessor);
     expect(result.method).toBe('POST');
-    expect(result.checkoutUrl).toBe('https://sandbox.interswitchng.com/webpay/pay');
+    expect(result.checkoutUrl).toBe('https://sandbox.interswitchng.com/collections/w/pay');
     expect(result.postData).toBeDefined();
-    expect(result.postData?.product_id).toBe('PROD-123');
-    expect(result.postData?.pay_item_id).toBe('ITEM-123');
+    expect(result.postData?.merchant_code).toBe('MX6072');
+    expect(result.postData?.pay_item_id).toBe('9405967');
+    expect(result.postData?.pay_item_name).toBe('Test Item');
     expect(result.postData?.txn_ref).toBe('REF-123');
     expect(result.postData?.amount).toBe('10000');
     expect(result.postData?.currency).toBe('566');
-    expect(result.postData?.hash).toHaveLength(128);
+    expect(result.postData?.site_redirect_url).toBe('https://example.com/callback');
+    expect(result.postData?.hash).toBeUndefined();
   });
 
   it('should throw when endpoint is missing for client-side checkout', async () => {
     const processorWithoutEndpoint: ProcessorConfig = {
-      ...webpayProcessor,
+      ...interswitchProcessor,
       endpoint: undefined,
     };
     await expect(
       adapter.initializeCheckout(baseRequest, processorWithoutEndpoint)
-    ).rejects.toThrow('Webpay client-side checkout requires an endpoint');
+    ).rejects.toThrow('Interswitch checkout requires an endpoint');
+  });
+
+  it('should throw when merchantCode or payItemId is missing', async () => {
+    const processorWithoutMerchant: ProcessorConfig = {
+      ...interswitchProcessor,
+      merchantCode: undefined,
+    };
+    await expect(
+      adapter.initializeCheckout(baseRequest, processorWithoutMerchant)
+    ).rejects.toThrow('Interswitch checkout requires merchantCode');
   });
 
   it.each([
@@ -117,12 +129,12 @@ describe('WebpayAdapter', () => {
     ['', 'pending'],
   ])('should parse resp code "%s" as "%s"', (resp, expected) => {
     const response = adapter.parseCallback(
-      `https://example.com/callback?txnref=REF-123&resp=${resp}&desc=Test&payRef=PAY-123`,
-      webpayProcessor
+      `https://example.com/callback?txnref=REF-123&resp=${resp}&desc=Test&retRef=RET-123`,
+      interswitchProcessor
     );
     expect(response.status).toBe(expected);
     expect(response.reference).toBe('REF-123');
-    expect(response.processorReference).toBe('PAY-123');
-    expect(response.processor).toBe('webpay');
+    expect(response.processorReference).toBe('RET-123');
+    expect(response.processor).toBe('interswitch');
   });
 });

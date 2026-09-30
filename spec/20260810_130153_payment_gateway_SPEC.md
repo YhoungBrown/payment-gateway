@@ -18,14 +18,14 @@ Build a TypeScript monorepo payment package (`@org/payment-gateway`) with a sing
 
 ## 1. Context & why now
 
-Merchants integrate each processor separately, duplicating checkout orchestration and response handling. A single gateway lets merchants offer Paystack, Flutterwave, and Interswitch Webpay from one configuration, while users either pay through a configured default or choose at checkout.
+Merchants integrate each processor separately, duplicating checkout orchestration and response handling. A single gateway lets merchants offer Paystack, Flutterwave, and Interswitch from one configuration, while users either pay through a configured default or choose at checkout.
 
 ## 2. Scope
 
 **In scope**
 - Monorepo with shared core, React package, and React Native package.
 - Single `pay()` entry point with default-first behavior and fallback selector.
-- Processor adapters for Paystack, Flutterwave, and Interswitch Webpay that launch checkout URLs.
+- Processor adapters for Paystack, Flutterwave, and Interswitch that launch checkout URLs.
 - Optional default `PaymentProcessorSelector` UI inside each platform package.
 - Headless hooks (`usePayment`, `usePaymentProcessors`) for fully custom UI.
 - Unified request/response types and normalized status handling.
@@ -35,7 +35,7 @@ Merchants integrate each processor separately, duplicating checkout orchestratio
 
 **Explicitly out of scope**
 - Bundling processor SDKs or native modules.
-- Server-side Webpay/Paystack/Flutterwave API clients.
+- Server-side Interswitch/Paystack/Flutterwave API clients.
 - Refund, chargeback, subscription, or payout flows.
 - On-device persistence of transaction history.
 - Merchant onboarding UI.
@@ -68,7 +68,7 @@ Merchants integrate each processor separately, duplicating checkout orchestratio
 
 - L1. Amounts SHALL be integers in minor units; currency SHALL be ISO 4217; no float arithmetic for money.
 - L2. Public API surface SHALL include at minimum: `PaymentGatewayProvider`, `usePayment`, `usePaymentProcessors`, and `PaymentProcessorSelector`.
-- L3. Supported processor types are locked to `paystack`, `flutterwave`, and `webpay`.
+- L3. Supported processor types are locked to `paystack`, `flutterwave`, and `interswitch`.
 - L4. Processor credentials/config SHALL be supplied by the merchant at provider initialization; no secrets SHALL be hardcoded in package source.
 - L5. `PaymentResponse` SHALL have the same fields for every processor: `{ status, reference, processor, processorReference?, message? }`.
 - L6. Exactly one processor per gateway instance may have `isDefault: true`.
@@ -100,7 +100,7 @@ Merchants integrate each processor separately, duplicating checkout orchestratio
 
 ```typescript
 // Processor types
-type ProcessorType = 'paystack' | 'flutterwave' | 'webpay';
+type ProcessorType = 'paystack' | 'flutterwave' | 'interswitch';
 
 // Verification result returned by merchant backend
 interface VerificationResult {
@@ -117,14 +117,14 @@ interface ProcessorConfig {
   publicKey?: string;    // Optional for backend-driven processors (Paystack, Flutterwave)
   callbackUrl: string;
   cancelUrl?: string;
-  endpoint?: string;     // Checkout endpoint, required for Webpay client-side mode
+  endpoint?: string;     // Checkout endpoint, required for Interswitch client-side mode
   // Split payment options — provider-specific
   subaccount?: string;   // Paystack subaccount code, e.g. "ACCT_xxxxxxxx"
   splitCode?: string;    // Flutterwave split code / subaccounts identifier
-  // Webpay-specific
-  productId?: string;    // Interswitch Webpay product_id
-  payItemId?: string;    // Interswitch Webpay pay_item_id
-  macKey?: string;       // Interswitch Webpay mac_key (used client-side for hash)
+  // Interswitch-specific
+  merchantCode?: string; // Interswitch merchant_code
+  payItemId?: string;    // Interswitch pay_item_id
+  payItemName?: string;  // Interswitch pay_item_name (optional)
 }
 
 // Payment request
@@ -167,7 +167,7 @@ interface PaymentGatewayConfig {
   debug?: boolean;
   // Called when the package needs a checkout URL for a processor.
   // Required for Paystack and Flutterwave because initialization requires a secret key.
-  // Optional for Webpay, which can build a client-side POST form.
+  // Optional for Interswitch, which can build a client-side POST form.
   initialize?: (
     request: PaymentRequest,
     processor: ProcessorConfig
@@ -199,14 +199,14 @@ interface UsePaymentProcessorsResult {
 1. **Checkout initialization (`initialize`)**
    - Before opening any checkout, the package needs a checkout URL.
    - For **Paystack** and **Flutterwave**, the merchant backend must call the processor's initialize endpoint using the secret key, then return the checkout URL. The package calls `initialize(request, processor)` to get `{ checkoutUrl, method, postData }`.
-   - For **Interswitch Webpay**, the adapter can build a client-side POST form because Webpay only requires `product_id`, `pay_item_id`, `mac_key`, and public fields. If `initialize` is provided, it is used instead.
+   - For **Interswitch**, the adapter can build a client-side POST form because Interswitch only requires `merchant_code`, `pay_item_id`, and public fields. If `initialize` is provided, it is used instead.
 
 2. **Callback interception**
    - The package loads `checkoutUrl` in a web popup (React) or WebView (React Native).
    - It watches the navigation URL. When the URL matches the configured `callbackUrl`, the package parses the query string and builds a `PaymentResponse`.
    - **Paystack:** The adapter reads `status` from the callback URL (`success`, `failed`, `abandoned`, `cancelled`) and maps it directly. If `status` is absent or unrecognized, the adapter returns `pending` so that an optional `verify` callback can make the final decision.
    - **Flutterwave:** The adapter reads `status` from the callback URL and maps `successful`/`success` to `success`, `cancelled`/`canceled` to `cancelled`, and `failed`/`failure` to `failed`.
-   - **Webpay:** The adapter reads `resp` from the callback URL. `00` means `success`; any other value means `failed`.
+   - **Interswitch:** The adapter reads `resp` from the callback URL. `00` means `success`; any other present value means `failed`; if `resp` is absent, it returns `pending` so an optional `verify` callback can decide.
 
 3. **Backend verification (`verify`)**
    - If `verify` is configured, the package calls `verify(response)` immediately after parsing the callback.
@@ -214,7 +214,7 @@ interface UsePaymentProcessorsResult {
    - The backend returns `{ verified: true, data? }` or `{ verified: false, message? }`.
    - The package does not return `status: 'success'` until `verify` resolves `verified: true`.
 
-#### Webpay implementation details
+#### Interswitch implementation details
 
 - **Payment URL**
   - The merchant supplies the checkout endpoint via `ProcessorConfig.endpoint`.
@@ -222,18 +222,18 @@ interface UsePaymentProcessorsResult {
   - If `endpoint` is missing and no `initialize` callback is provided, the adapter throws `CheckoutInitializationError`.
 
 - **Required POST fields (client-side mode)**
-  - `product_id`
-  - `pay_item_id`
+  - `merchant_code` — maps to `ProcessorConfig.merchantCode`
+  - `pay_item_id` — maps to `ProcessorConfig.payItemId`
   - `currency` — numeric code, e.g. `'566'` for NGN
   - `site_redirect_url` — maps to `ProcessorConfig.callbackUrl`
   - `txn_ref` — maps to `PaymentRequest.reference`
   - `amount` — maps to `PaymentRequest.amount` (already in minor units / kobo)
-  - `hash` — SHA-512 hex digest of `txn_ref + product_id + pay_item_id + amount + site_redirect_url + mac_key`
+  - `pay_item_name` — maps to `ProcessorConfig.payItemName` (optional)
   - `cust_name`
   - `cust_id`
 
 - **Callback**
-  - Webpay POSTs back to `site_redirect_url` with fields including `txnref`, `resp`, `desc`, `payRef`, `retRef`, `cardNum`, `amount`.
+  - Interswitch POSTs back to `site_redirect_url` with fields including `txnref`, `resp`, `desc`, `payRef`, `retRef`, `cardNum`, `amount`.
 
 - **Verification**
   - The SDK does not perform client-side verification because CORS and security concerns make it unreliable.
@@ -291,7 +291,7 @@ payment-gateway/
 │   │   │   │   ├── base.ts
 │   │   │   │   ├── paystack.ts
 │   │   │   │   ├── flutterwave.ts
-│   │   │   │   └── webpay.ts
+│   │   │   │   └── interswitch.ts
 │   │   │   └── utils/
 │   │   │       └── money.ts
 │   │   ├── package.json
@@ -333,7 +333,7 @@ No example app inside the SDK repo. The `smartpayfresh` app is the external inte
 
 1. Scaffold monorepo with workspaces, `tsup`, TypeScript, and shared config.
 2. Implement `packages/core` types, errors, logger, context, reducer, and base adapter contract.
-3. Implement Paystack, Flutterwave, and Webpay adapters (URL/callback normalization only).
+3. Implement Paystack, Flutterwave, and Interswitch adapters (URL/callback normalization only).
 4. Implement `packages/react` provider, `usePayment`, `usePaymentProcessors`, default selector, and popup checkout.
 5. Implement `packages/react-native` provider, `usePayment`, `usePaymentProcessors`, default selector, and WebView checkout.
 6. Add backend `initialize`/`verify` wiring and callback URL parsing.
