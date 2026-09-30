@@ -45,12 +45,6 @@ export interface InitializeResult {
   postData?: Record<string, string>;
 }
 
-export interface BrowserOptions {
-  toolbarColor?: string;
-  showTitle?: boolean;
-  enableUrlBarHiding?: boolean;
-}
-
 export interface PaymentGatewayConfig {
   processors: ProcessorConfig[];
   debug?: boolean;
@@ -59,7 +53,6 @@ export interface PaymentGatewayConfig {
     processor: ProcessorConfig
   ) => Promise<InitializeResult | undefined>;
   verify?: (response: PaymentResponse) => Promise<VerificationResult>;
-  browserOptions?: BrowserOptions;
 }
 
 export interface UsePaymentResult {

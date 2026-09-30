@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { InAppBrowser } from 'react-native-inappbrowser-reborn';
 import type {
-  BrowserOptions,
   InitializeResult,
   PaymentResponse,
   ProcessorConfig,
@@ -15,7 +14,6 @@ interface CheckoutBrowserProps {
   reference: string;
   debug?: boolean;
   verifyHookProvided: boolean;
-  browserOptions?: BrowserOptions;
   onComplete: (response: PaymentResponse) => void;
   onCancel: () => void;
 }
@@ -25,7 +23,6 @@ export function CheckoutBrowser({
   processor,
   reference,
   verifyHookProvided,
-  browserOptions,
   onComplete,
   onCancel,
 }: CheckoutBrowserProps) {
@@ -72,9 +69,9 @@ export function CheckoutBrowser({
         const options = {
           dismissButtonStyle: 'close' as const,
           modalEnabled: true,
-          showTitle: browserOptions?.showTitle ?? true,
-          toolbarColor: browserOptions?.toolbarColor ?? '#6200EE',
-          enableUrlBarHiding: browserOptions?.enableUrlBarHiding ?? true,
+          showTitle: true,
+          toolbarColor: '#6200EE',
+          enableUrlBarHiding: true,
           forceCloseOnRedirection: false,
         };
 
@@ -133,7 +130,6 @@ export function CheckoutBrowser({
     processor,
     reference,
     verifyHookProvided,
-    browserOptions,
     onComplete,
     onCancel,
   ]);

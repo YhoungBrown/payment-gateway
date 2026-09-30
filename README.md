@@ -370,115 +370,15 @@ const config = {
 
 > Do not hardcode Interswitch URLs in your SDK config. Use the endpoint provided by Interswitch for your environment (sandbox or production).
 
-### React Native browser checkout
+### React Native WebView checkout
 
-In React Native, the Interswitch checkout is opened in the device browser (`react-native-inappbrowser-reborn`) instead of a WebView. This avoids anti-bot/cookie-banner issues that can block the WebView.
-
-Because mobile browsers cannot reliably submit a POST form directly, your backend must provide a form-proxy endpoint. The SDK calls your `initialize` callback, which returns a GET URL pointing to that endpoint. When the browser loads the page, the backend renders a self-submitting POST form that submits to Interswitch.
-
-> **The `/interswitch-form` endpoint is only needed if you configure Interswitch as a processor.** If your app only uses Paystack or Flutterwave, you can skip this endpoint and use the SDK's standard initialization flow.
-
-#### Backend form-proxy example
-
-Your backend must expose two endpoints for Interswitch:
-
-1. `POST /initialize` — returns the form-proxy URL.
-2. `GET /interswitch-form` — serves the auto-submitting POST form.
-
-```js
-// POST /initialize
-app.post('/initialize', async (req, res) => {
-  const { request, processor } = req.body;
-
-  if (processor.type === 'paystack') {
-    // existing Paystack initialize logic
-    return res.json({ checkoutUrl: authorizationUrl, method: 'GET' });
-  }
-
-  if (processor.type === 'interswitch') {
-    const params = new URLSearchParams({
-      endpoint: processor.endpoint,
-      merchant_code: processor.merchantCode,
-      pay_item_id: processor.payItemId,
-      site_redirect_url: processor.callbackUrl,
-      txn_ref: request.reference,
-      amount: String(request.amount),
-      currency: mapCurrencyToNumeric(request.currency), // e.g. NGN -> 566
-      cust_name: request.email,
-      cust_id: request.email,
-      ...(processor.payItemName ? { pay_item_name: processor.payItemName } : {}),
-    });
-
-    const origin = `${req.protocol}://${req.get('host')}`;
-    return res.json({
-      checkoutUrl: `${origin}/interswitch-form?${params.toString()}`,
-      method: 'GET',
-    });
-  }
-
-  return res.status(400).json({ error: 'Unsupported processor' });
-});
-
-// GET /interswitch-form
-app.get('/interswitch-form', (req, res) => {
-  const { endpoint, ...fields } = req.query;
-
-  const inputs = Object.entries(fields)
-    .filter(([, value]) => value !== undefined && value !== null && value !== '')
-    .map(([name, value]) => {
-      const escapedName = String(name).replace(/"/g, '&quot;');
-      const escapedValue = String(value).replace(/"/g, '&quot;');
-      return `<input type="hidden" name="${escapedName}" value="${escapedValue}" />`;
-    })
-    .join('\n  ');
-
-  const escapedEndpoint = String(endpoint).replace(/"/g, '&quot;');
-
-  res.set('Content-Type', 'text/html');
-  res.send(`<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8" /></head>
-<body>
-  <p>Redirecting to payment gateway...</p>
-  <form id="isw-form" method="post" action="${escapedEndpoint}">
-    ${inputs}
-  </form>
-  <script>document.getElementById('isw-form').submit();</script>
-</body>
-</html>`);
-});
-```
-
-#### Browser checkout behavior
-
-By default, the SDK renders checkout inside a WebView. For Interswitch, the SDK opens the checkout URL in the device browser (`react-native-inappbrowser-reborn`) instead.
-
-**Android**: The browser watches for navigation to the processor's `callbackUrl`. When Interswitch redirects there after payment, the browser closes automatically and the SDK reports `pending`, which triggers your `verify` callback.
-
-**iOS**: The browser does not auto-close on redirect. The user must close it manually. Once closed, the SDK reports `pending` and triggers your `verify` callback.
-
-This is why a `verify` callback is **required** for Interswitch in React Native — Interswitch only returns a transaction reference in the browser redirect and explicitly recommends requerying their verification endpoint before concluding that a payment was successful.
-
-#### Browser options
-
-You can customize the browser toolbar via `browserOptions` in your config:
-
-```ts
-const config = {
-  processors: [...],
-  browserOptions: {
-    toolbarColor: '#007AFF',
-    showTitle: true,
-    enableUrlBarHiding: true,
-  },
-};
-```
+In React Native, all processors open inside a WebView. The Interswitch adapter builds a client-side POST form and submits it directly in the WebView.
 
 ## Verification
 
 The `verify` callback is optional for Paystack and Flutterwave. If you do not provide it, the SDK trusts the status returned in the processor callback URL.
 
-For **Interswitch in React Native, `verify` is required**. Interswitch only returns a transaction reference in the browser redirect and explicitly recommends requerying their verification endpoint before concluding that a payment was successful.
+For **Interswitch in React Native, `verify` is required**. Interswitch only returns a transaction reference in the WebView redirect and explicitly recommends requerying their verification endpoint before concluding that a payment was successful.
 
 ### No verification
 

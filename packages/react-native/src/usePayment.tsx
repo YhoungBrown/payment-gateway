@@ -6,7 +6,6 @@ import {
   type PaymentResponse,
 } from '@org/payment-gateway-core';
 import { CheckoutWebView } from './checkout/CheckoutWebView';
-import { CheckoutBrowser } from './checkout/CheckoutBrowser';
 
 export function usePayment(request: PaymentRequest) {
   const { state, pay, selectProcessor, cancelSelection, config } = usePaymentContext();
@@ -96,22 +95,6 @@ export function usePayment(request: PaymentRequest) {
 
   const CheckoutView = useMemo(() => {
     if (!checkoutResult || !processor) return null;
-
-    if (processor.type === 'interswitch') {
-      console.log('[usePayment] Using CheckoutBrowser for Interswitch');
-      return (
-        <CheckoutBrowser
-          result={checkoutResult}
-          processor={processor}
-          reference={request.reference}
-          debug={config.debug}
-          verifyHookProvided={!!config.verify}
-          browserOptions={config.browserOptions}
-          onComplete={handleComplete}
-          onCancel={handleCancel}
-        />
-      );
-    }
 
     console.log('[usePayment] Using CheckoutWebView for', processor.type);
     return (
