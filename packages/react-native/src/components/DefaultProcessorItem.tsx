@@ -12,6 +12,7 @@ interface DefaultProcessorItemProps {
   processor: ProcessorConfig;
   onSelect: () => void;
   isLoading?: boolean;
+  isFailed?: boolean;
   activityIndicatorColor?: string;
 }
 
@@ -19,20 +20,26 @@ export function DefaultProcessorItem({
   processor,
   onSelect,
   isLoading = false,
+  isFailed = false,
   activityIndicatorColor,
 }: DefaultProcessorItemProps) {
   return (
     <TouchableOpacity
-      style={styles.button}
+      style={[styles.button, isFailed && styles.buttonFailed]}
       onPress={onSelect}
-      disabled={isLoading}
-      activeOpacity={isLoading ? 1 : 0.2}
+      disabled={isLoading || isFailed}
+      activeOpacity={isLoading || isFailed ? 1 : 0.2}
     >
       <View style={styles.content}>
-        <Text style={[styles.text, isLoading && styles.textFaded]}>
-          {processor.type.toUpperCase()}
-          {processor.isDefault ? ' (default)' : ''}
-        </Text>
+        <View>
+          <Text style={[styles.text, isLoading && styles.textFaded]}>
+            {processor.type.toUpperCase()}
+            {processor.isDefault ? ' (default)' : ''}
+          </Text>
+          {isFailed && (
+            <Text style={styles.failedText}>Unavailable</Text>
+          )}
+        </View>
         {isLoading && (
           <ActivityIndicator color={activityIndicatorColor} />
         )}
@@ -50,6 +57,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#fff',
   },
+  buttonFailed: {
+    opacity: 0.6,
+    borderColor: '#ffcdd2',
+    backgroundColor: '#ffebee',
+  },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -60,5 +72,10 @@ const styles = StyleSheet.create({
   },
   textFaded: {
     opacity: 0.6,
+  },
+  failedText: {
+    fontSize: 12,
+    color: '#c62828',
+    marginTop: 2,
   },
 });
