@@ -60,11 +60,21 @@ describe('FlutterwaveAdapter', () => {
     ).rejects.toThrow('Flutterwave checkout requires an initialize callback');
   });
 
+  it('should use initialize callback when provided', async () => {
+    const initialize = async () => ({ checkoutUrl: 'https://checkout.flutterwave.com/v3/hosted/pay/test' });
+    const result = await adapter.initializeCheckout(baseRequest, flutterwaveProcessor, initialize);
+    expect(result.checkoutUrl).toBe('https://checkout.flutterwave.com/v3/hosted/pay/test');
+  });
+
   it.each([
     ['successful', 'success'],
+    ['success', 'success'],
     ['cancelled', 'cancelled'],
+    ['canceled', 'cancelled'],
     ['failed', 'failed'],
+    ['failure', 'failed'],
     ['unknown', 'pending'],
+    ['', 'pending'],
   ])('should parse status "%s" as "%s"', (input, expected) => {
     const response = adapter.parseCallback(
       `https://example.com/callback?status=${input}&tx_ref=REF-123&transaction_id=TRX-456`,
@@ -74,6 +84,16 @@ describe('FlutterwaveAdapter', () => {
     expect(response.reference).toBe('REF-123');
     expect(response.processorReference).toBe('TRX-456');
     expect(response.processor).toBe('flutterwave');
+  });
+
+  it('should parse callback without transaction_id', () => {
+    const response = adapter.parseCallback(
+      'https://example.com/callback?status=successful&tx_ref=REF-123',
+      flutterwaveProcessor
+    );
+    expect(response.status).toBe('success');
+    expect(response.reference).toBe('REF-123');
+    expect(response.processorReference).toBeUndefined();
   });
 });
 

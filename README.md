@@ -2,6 +2,8 @@
 
 A TypeScript monorepo payment package for React and React Native. It abstracts Paystack, Flutterwave, and Interswitch behind a single `pay()` API.
 
+It delegates all processor API calls to your own backend through `initialize` and `verify` callbacks, so secret keys never ship in the client.
+
 ## Packages
 
 - `@org/payment-gateway-core` — shared types, adapters, context, and reducer.
@@ -347,6 +349,44 @@ If you build your own selector component, pass `activeProcessorId` and `isProces
 | `defaultProcessor` | `ProcessorConfig \| undefined` | The processor marked as default, if any. |
 
 The wrapped component must receive a `request` prop of type `PaymentRequest`.
+
+## Flutterwave Standard checkout
+
+The Flutterwave adapter uses Flutterwave's Standard (hosted) flow. Your backend initializes the payment with your Flutterwave secret key and returns the hosted checkout link. The SDK then opens that link in a WebView (React Native) or popup (web).
+
+```ts
+const config = {
+  processors: [
+    {
+      id: 'flutterwave-1',
+      type: 'flutterwave' as const,
+      callbackUrl: 'https://yourapp.com/flutterwave-callback',
+      isDefault: true,
+    },
+  ],
+  initialize: async (request, processor) => {
+    const res = await fetch('/api/payments/initialize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ request, processor }),
+    });
+    const { checkoutUrl } = await res.json();
+    return { checkoutUrl };
+  },
+  verify: async (response) => {
+    const res = await fetch('/api/payments/verify-flutterwave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(response),
+    });
+    return res.json(); // { verified: boolean, message?: string }
+  },
+};
+```
+
+Your backend should call `POST https://api.flutterwave.com/v3/payments` to create the payment and return `{ checkoutUrl: data.data.link }`. Flutterwave expects the amount in the currency's major unit (e.g. NGN Naira, not kobo), so convert from minor units if needed.
+
+After payment, Flutterwave redirects to `redirect_url` with `status`, `tx_ref`, and `transaction_id`. The SDK parses these into a `PaymentResponse`. If `verify` is configured, use `response.processorReference` (the Flutterwave `transaction_id`) to verify server-to-server via `GET https://api.flutterwave.com/v3/transactions/{transaction_id}/verify`.
 
 ## Interswitch Web Checkout client-side initialization
 
