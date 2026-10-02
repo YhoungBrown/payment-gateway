@@ -22,11 +22,13 @@ interface PaymentProcessorSelectorProps {
   backgroundColor?: string;
   isProcessing?: boolean;
   activeProcessorId?: string;
+  failedProcessorIds?: string[];
   activityIndicatorColor?: string;
   renderItem?: (props: {
     processor: ProcessorConfig;
     onSelect: () => void;
     isLoading: boolean;
+    isFailed: boolean;
   }) => React.ReactNode;
 }
 
@@ -40,6 +42,7 @@ export function PaymentProcessorSelector({
   backgroundColor = '#fff',
   isProcessing = false,
   activeProcessorId,
+  failedProcessorIds = [],
   activityIndicatorColor,
   renderItem,
 }: PaymentProcessorSelectorProps) {
@@ -68,6 +71,7 @@ export function PaymentProcessorSelector({
             {processors.map((processor) => {
               const isLoading =
                 isProcessing && processor.id === activeProcessorId;
+              const isFailed = failedProcessorIds.includes(processor.id);
 
               return renderItem ? (
                 <View key={processor.id}>
@@ -75,6 +79,7 @@ export function PaymentProcessorSelector({
                     processor,
                     onSelect: () => onSelect(processor.id),
                     isLoading,
+                    isFailed,
                   })}
                 </View>
               ) : (
@@ -83,6 +88,7 @@ export function PaymentProcessorSelector({
                   processor={processor}
                   onSelect={() => onSelect(processor.id)}
                   isLoading={isLoading}
+                  isFailed={isFailed}
                   activityIndicatorColor={activityIndicatorColor}
                 />
               );

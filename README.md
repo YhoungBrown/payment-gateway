@@ -506,6 +506,14 @@ const config = {
 4. If `verify` returns `{ verified: false }`, the package returns `status: 'failed'` with the verification message.
 5. For Interswitch in React Native without `verify`, closing the browser returns `status: 'cancelled'` because the SDK cannot confirm the outcome.
 
+## Processor fallback
+
+If you configure multiple processors and the default processor's checkout fails to load or initialize, the SDK automatically falls back to the processor selector so the user can choose another processor. The failed processor is shown as **Unavailable** and is disabled for the rest of the current payment attempt.
+
+The fallback clears when the user starts a new payment (for example, by tapping Pay again).
+
+If only one processor is configured and it fails, the SDK ends the flow and reports a failed payment.
+
 ## Callback URL matching
 
 The `callbackUrl` you set in `ProcessorConfig` must match the callback URL configured on your backend/processor. The SDK watches the checkout WebView/popup for navigation to this URL.
