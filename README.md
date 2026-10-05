@@ -190,7 +190,7 @@ function Checkout() {
       {response && <Text>Status: {response.status}</Text>}
       {CheckoutView}
       <PaymentProcessorSelector
-        open={isSelecting || isProcessing}
+        open={isSelecting}
         processors={processors}
         onSelect={selectProcessor}
         onCancel={cancelSelection}
