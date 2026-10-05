@@ -86,6 +86,8 @@ const config = {
   },
 };
 
+> `isDefault` is optional. Add it to a processor only when you want that processor to launch automatically when `pay()` is called. If no processor has `isDefault: true`, the SDK shows the selector UI.
+
 function App() {
   return (
     <PaymentGatewayProvider config={config}>
