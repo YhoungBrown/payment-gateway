@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import type {
@@ -131,6 +131,12 @@ export function CheckoutWebView({
   onComplete,
   onCancel,
 }: CheckoutWebViewProps) {
+  const hasLoadedRef = useRef(false);
+
+  const handleLoad = useCallback(() => {
+    hasLoadedRef.current = true;
+  }, []);
+
   const handleCallbackUrl = useCallback(
     (url: string) => {
       // TODO: remove debug log after cookie banner issue is resolved
@@ -184,6 +190,9 @@ export function CheckoutWebView({
 
   const handleError = useCallback(
     (event: WebViewErrorEvent) => {
+      // If the checkout already loaded, this error is from the user
+      // closing the WebView or an aborted navigation — not a processor failure.
+      if (hasLoadedRef.current) return;
       const description =
         (event.nativeEvent as any)?.description ||
         'WebView failed to load checkout';
@@ -199,6 +208,9 @@ export function CheckoutWebView({
 
   const handleHttpError = useCallback(
     (event: WebViewHttpErrorEvent) => {
+      // If the checkout already loaded, this HTTP error is from the user
+      // closing the WebView or an aborted navigation — not a processor failure.
+      if (hasLoadedRef.current) return;
       const nativeEvent = event.nativeEvent as any;
       const description =
         nativeEvent?.description ||
@@ -259,6 +271,7 @@ export function CheckoutWebView({
           onNavigationStateChange={handleNavigationStateChange}
           onError={handleError}
           onHttpError={handleHttpError}
+          onLoad={handleLoad}
           startInLoadingState
           javaScriptEnabled
           domStorageEnabled

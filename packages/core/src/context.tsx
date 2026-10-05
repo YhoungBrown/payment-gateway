@@ -137,7 +137,8 @@ export function PaymentGatewayProvider({
 
       let finalResponse = response;
 
-      if (config.verify) {
+      // Only verify responses that are not user-cancelled.
+      if (config.verify && response.status !== 'cancelled') {
         const verification = await config.verify(response);
         if (verification.verified) {
           finalResponse = {

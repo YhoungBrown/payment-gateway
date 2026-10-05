@@ -58,6 +58,7 @@ describe('usePayment', () => {
 
     await waitFor(() => {
       expect(result.current.isProcessing).toBe(true);
+      expect(result.current.isSelecting).toBe(false);
       expect(result.current.CheckoutView).not.toBeNull();
     });
   });
