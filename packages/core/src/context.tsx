@@ -137,7 +137,8 @@ export function PaymentGatewayProvider({
 
       let finalResponse = response;
 
-      if (config.verify) {
+      // Only verify responses that are not user-cancelled.
+      if (config.verify && response.status !== 'cancelled') {
         const verification = await config.verify(response);
         if (verification.verified) {
           finalResponse = {
@@ -162,6 +163,32 @@ export function PaymentGatewayProvider({
       return finalResponse;
     },
     [config.verify, logger]
+  );
+
+  const getAvailableProcessors = useCallback(
+    (excludeProcessorId: string) => {
+      return processors.filter(
+        (p) => p.id !== excludeProcessorId && !state.failedProcessorIds.includes(p.id)
+      );
+    },
+    [processors, state.failedProcessorIds]
+  );
+
+  const handleProcessorFailure = useCallback(
+    (
+      processorId: string,
+      launchCheckout: LaunchCheckout,
+      request: PaymentRequest
+    ): Promise<PaymentResponse> => {
+      dispatch({
+        type: 'PROCESSOR_FAILED',
+        payload: { processorId, showSelector: true },
+      });
+      return new Promise((resolve, reject) => {
+        selectionRef.current = { resolve, reject, launchCheckout, request };
+      });
+    },
+    [dispatch]
   );
 
   const launchProcessor = useCallback(
@@ -198,6 +225,18 @@ export function PaymentGatewayProvider({
           processor,
           launchCheckout
         );
+
+        if (response.status === 'failed') {
+          const available = getAvailableProcessors(processor.id);
+          if (available.length > 0) {
+            return handleProcessorFailure(
+              processor.id,
+              launchCheckout,
+              request
+            );
+          }
+        }
+
         if (selectionRef.current) {
           selectionRef.current.resolve(response);
           selectionRef.current = null;
@@ -205,6 +244,10 @@ export function PaymentGatewayProvider({
         return response;
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
+        const available = getAvailableProcessors(processor.id);
+        if (available.length > 0) {
+          return handleProcessorFailure(processor.id, launchCheckout, request);
+        }
         if (selectionRef.current) {
           selectionRef.current.reject(err);
           selectionRef.current = null;
@@ -213,7 +256,7 @@ export function PaymentGatewayProvider({
         throw err;
       }
     },
-    [processors, launchProcessor, logger]
+    [processors, launchProcessor, logger, getAvailableProcessors, handleProcessorFailure]
   );
 
   const pay = useCallback(
@@ -229,13 +272,34 @@ export function PaymentGatewayProvider({
           processorId: defaultProcessor.id,
         });
         try {
-          return await launchProcessor(
+          const response = await launchProcessor(
             request,
             defaultProcessor,
             launchCheckout
           );
+
+          if (response.status === 'failed') {
+            const available = getAvailableProcessors(defaultProcessor.id);
+            if (available.length > 0) {
+              return handleProcessorFailure(
+                defaultProcessor.id,
+                launchCheckout,
+                request
+              );
+            }
+          }
+
+          return response;
         } catch (error) {
           const err = error instanceof Error ? error : new Error(String(error));
+          const available = getAvailableProcessors(defaultProcessor.id);
+          if (available.length > 0) {
+            return handleProcessorFailure(
+              defaultProcessor.id,
+              launchCheckout,
+              request
+            );
+          }
           dispatch({ type: 'PAYMENT_ERROR', payload: { error: err } });
           throw err;
         }
@@ -248,7 +312,7 @@ export function PaymentGatewayProvider({
         selectionRef.current = { resolve, reject, launchCheckout, request };
       });
     },
-    [defaultProcessor, launchProcessor, logger]
+    [defaultProcessor, launchProcessor, logger, getAvailableProcessors, handleProcessorFailure]
   );
 
   const cancelSelection = useCallback((): void => {

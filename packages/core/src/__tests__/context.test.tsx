@@ -210,6 +210,7 @@ describe('PaymentGatewayProvider', () => {
 
     const configWithVerify: PaymentGatewayConfig = {
       ...baseConfig,
+      processors: [baseConfig.processors[0]], // single processor so fallback does not apply
       verify,
     };
 
@@ -221,6 +222,192 @@ describe('PaymentGatewayProvider', () => {
 
     fireEvent.click(screen.getByText('Pay Failed'));
 
+    await waitFor(() =>
+      expect(screen.getByTestId('result-status').textContent).toBe('failed')
+    );
+  });
+
+  it('should fall back to selector when default processor checkout fails', async () => {
+    const FallbackConsumer = () => {
+      const { state, pay, selectProcessor } = usePaymentContext();
+      return (
+        <div>
+          <div data-testid="status">{state.transaction.status}</div>
+          <div data-testid="failed-count">
+            {state.failedProcessorIds.length}
+          </div>
+          <button
+            onClick={() =>
+              pay(baseRequest, async () => ({
+                status: 'failed',
+                reference: 'REF-FAILED',
+                processor: 'paystack',
+              }))
+            }
+          >
+            Pay
+          </button>
+          <button
+            onClick={() =>
+              selectProcessor('flutterwave-1', baseRequest, async () => ({
+                status: 'success',
+                reference: 'REF-FW',
+                processor: 'flutterwave',
+              }))
+            }
+          >
+            Select Flutterwave
+          </button>
+        </div>
+      );
+    };
+
+    render(
+      <PaymentGatewayProvider config={baseConfig}>
+        <FallbackConsumer />
+      </PaymentGatewayProvider>
+    );
+
+    fireEvent.click(screen.getByText('Pay'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('status').textContent).toBe('selecting')
+    );
+    expect(screen.getByTestId('failed-count').textContent).toBe('1');
+
+    fireEvent.click(screen.getByText('Select Flutterwave'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('status').textContent).toBe('done')
+    );
+  });
+
+  it('should fall back to selector when selected processor checkout fails', async () => {
+    const configWithoutDefault: PaymentGatewayConfig = {
+      ...baseConfig,
+      processors: [
+        { ...baseConfig.processors[0], isDefault: false },
+        baseConfig.processors[1],
+      ],
+    };
+
+    const FallbackConsumer = () => {
+      const { state, pay, selectProcessor } = usePaymentContext();
+      return (
+        <div>
+          <div data-testid="status">{state.transaction.status}</div>
+          <div data-testid="failed-count">
+            {state.failedProcessorIds.length}
+          </div>
+          <button
+            onClick={() =>
+              pay(baseRequest, async () => ({
+                status: 'success',
+                reference: 'REF-OK',
+                processor: 'paystack',
+              }))
+            }
+          >
+            Pay
+          </button>
+          <button
+            onClick={() =>
+              selectProcessor('paystack-1', baseRequest, async () => ({
+                status: 'failed',
+                reference: 'REF-FAILED',
+                processor: 'paystack',
+              }))
+            }
+          >
+            Select Paystack
+          </button>
+          <button
+            onClick={() =>
+              selectProcessor('flutterwave-1', baseRequest, async () => ({
+                status: 'success',
+                reference: 'REF-FW',
+                processor: 'flutterwave',
+              }))
+            }
+          >
+            Select Flutterwave
+          </button>
+        </div>
+      );
+    };
+
+    render(
+      <PaymentGatewayProvider config={configWithoutDefault}>
+        <FallbackConsumer />
+      </PaymentGatewayProvider>
+    );
+
+    fireEvent.click(screen.getByText('Pay'));
+    await waitFor(() =>
+      expect(screen.getByTestId('status').textContent).toBe('selecting')
+    );
+
+    fireEvent.click(screen.getByText('Select Paystack'));
+    await waitFor(() =>
+      expect(screen.getByTestId('status').textContent).toBe('selecting')
+    );
+    expect(screen.getByTestId('failed-count').textContent).toBe('1');
+
+    fireEvent.click(screen.getByText('Select Flutterwave'));
+    await waitFor(() =>
+      expect(screen.getByTestId('status').textContent).toBe('done')
+    );
+  });
+
+  it('should return failed response when all processors fail', async () => {
+    const FailedConsumer = () => {
+      const { state, pay, selectProcessor } = usePaymentContext();
+      const [result, setResult] = useState<PaymentResponse | null>(null);
+      return (
+        <div>
+          <div data-testid="status">{state.transaction.status}</div>
+          <button
+            onClick={async () => {
+              const response = await pay(baseRequest, async () => ({
+                status: 'failed',
+                reference: 'REF-FAILED',
+                processor: 'paystack',
+              }));
+              setResult(response);
+            }}
+          >
+            Pay
+          </button>
+          <button
+            onClick={() =>
+              selectProcessor('flutterwave-1', baseRequest, async () => ({
+                status: 'failed',
+                reference: 'REF-FW-FAILED',
+                processor: 'flutterwave',
+              }))
+            }
+          >
+            Select Flutterwave
+          </button>
+          {result && (
+            <div data-testid="result-status">{result.status}</div>
+          )}
+        </div>
+      );
+    };
+
+    render(
+      <PaymentGatewayProvider config={baseConfig}>
+        <FailedConsumer />
+      </PaymentGatewayProvider>
+    );
+
+    fireEvent.click(screen.getByText('Pay'));
+    await waitFor(() =>
+      expect(screen.getByTestId('status').textContent).toBe('selecting')
+    );
+
+    fireEvent.click(screen.getByText('Select Flutterwave'));
     await waitFor(() =>
       expect(screen.getByTestId('result-status').textContent).toBe('failed')
     );
