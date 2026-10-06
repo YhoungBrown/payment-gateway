@@ -96,7 +96,6 @@ export function usePayment(request: PaymentRequest) {
   const CheckoutView = useMemo(() => {
     if (!checkoutResult || !processor) return null;
 
-    console.log('[usePayment] Using CheckoutWebView for', processor.type);
     return (
       <CheckoutWebView
         result={checkoutResult}
