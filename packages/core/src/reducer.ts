@@ -4,6 +4,7 @@ export interface PaymentState {
   processors: ProcessorConfig[];
   defaultProcessor: ProcessorConfig | undefined;
   activeProcessorId?: string;
+  failedProcessorIds: string[];
   transaction: {
     status:
       | 'idle'
@@ -28,11 +29,16 @@ export type PaymentAction =
   | { type: 'CALLBACK_RECEIVED'; payload: { response: PaymentResponse } }
   | { type: 'VERIFICATION_COMPLETE'; payload: { response: PaymentResponse } }
   | { type: 'PAYMENT_ERROR'; payload: { error: Error } }
+  | {
+      type: 'PROCESSOR_FAILED';
+      payload: { processorId: string; showSelector: boolean };
+    }
   | { type: 'RESET' };
 
 export const initialState: PaymentState = {
   processors: [],
   defaultProcessor: undefined,
+  failedProcessorIds: [],
   transaction: { status: 'idle' },
 };
 
@@ -44,6 +50,8 @@ export function paymentReducer(
     case 'START_PAYMENT':
       return {
         ...state,
+        activeProcessorId: undefined,
+        failedProcessorIds: [],
         transaction: { status: 'initializing' },
       };
     case 'SHOW_SELECTOR':
@@ -91,6 +99,19 @@ export function paymentReducer(
         ...state,
         transaction: { status: 'error', error: action.payload.error },
       };
+    case 'PROCESSOR_FAILED': {
+      const failedProcessorIds = Array.from(
+        new Set([...state.failedProcessorIds, action.payload.processorId])
+      );
+      return {
+        ...state,
+        activeProcessorId: undefined,
+        failedProcessorIds,
+        transaction: action.payload.showSelector
+          ? { status: 'selecting' }
+          : { status: 'error', error: new Error('Processor unavailable') },
+      };
+    }
     case 'RESET':
       return {
         ...state,

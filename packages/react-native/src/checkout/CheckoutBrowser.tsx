@@ -45,23 +45,13 @@ export function CheckoutBrowser({
 
     const launchBrowser = async () => {
       try {
-        console.log(
-          '[CheckoutBrowser] Launching checkout in device browser'
-        );
-
         const isAvailable = await InAppBrowser.isAvailable();
         if (!isAvailable) {
-          console.warn(
-            '[CheckoutBrowser] InAppBrowser is not available; falling back to WebView'
-          );
           if (mountedRef.current) setFallbackToWebView(true);
           return;
         }
 
         if (result.method !== 'GET') {
-          console.warn(
-            '[CheckoutBrowser] Checkout is not a GET URL; falling back to WebView'
-          );
           if (mountedRef.current) setFallbackToWebView(true);
           return;
         }
@@ -75,8 +65,6 @@ export function CheckoutBrowser({
           forceCloseOnRedirection: false,
         };
 
-        console.log('[CheckoutBrowser] Opening browser at', result.checkoutUrl);
-
         if (Platform.OS === 'android') {
           await InAppBrowser.openAuth(
             result.checkoutUrl,
@@ -88,15 +76,8 @@ export function CheckoutBrowser({
         }
 
         if (!mountedRef.current) {
-          console.log(
-            '[CheckoutBrowser] Component unmounted while browser was open'
-          );
           return;
         }
-
-        console.log(
-          '[CheckoutBrowser] Browser closed or redirect detected'
-        );
 
         // The Interswitch redirect parameters must not be trusted (per Interswitch docs).
         // We always report pending and let the merchant's verify hook determine the
@@ -113,11 +94,6 @@ export function CheckoutBrowser({
           onCancel();
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error(
-          '[CheckoutBrowser] Failed to open browser; falling back to WebView:',
-          message
-        );
         if (mountedRef.current) {
           setFallbackToWebView(true);
         }

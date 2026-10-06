@@ -71,6 +71,7 @@ export function usePayment(request: PaymentRequest) {
         state.transaction.status === 'selecting' ||
         state.transaction.status === 'processor_selected',
       activeProcessorId: state.activeProcessorId,
+      failedProcessorIds: state.failedProcessorIds,
       response: lastResponse,
       error: lastError,
       reset,
@@ -80,6 +81,8 @@ export function usePayment(request: PaymentRequest) {
       selectProcessorFn,
       cancelSelection,
       state.transaction.status,
+      state.activeProcessorId,
+      state.failedProcessorIds,
       lastResponse,
       lastError,
       reset,

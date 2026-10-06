@@ -62,6 +62,7 @@ export interface UsePaymentResult {
   isProcessing: boolean;
   isSelecting: boolean;
   activeProcessorId?: string;
+  failedProcessorIds: string[];
   error: Error | null;
   reset: () => void;
 }

@@ -7,9 +7,11 @@ interface PaymentProcessorSelectorProps {
   onSelect: (processorId: string) => void;
   onCancel: () => void;
   title?: string;
+  failedProcessorIds?: string[];
   renderItem?: (props: {
     processor: ProcessorConfig;
     onSelect: () => void;
+    isFailed: boolean;
   }) => React.ReactNode;
 }
 
@@ -19,6 +21,7 @@ export function PaymentProcessorSelector({
   onSelect,
   onCancel,
   title = 'Select a payment method',
+  failedProcessorIds = [],
   renderItem,
 }: PaymentProcessorSelectorProps) {
   if (!open) return null;
@@ -49,12 +52,14 @@ export function PaymentProcessorSelector({
       >
         <h2 style={{ marginTop: 0 }}>{title}</h2>
         <div>
-          {processors.map((processor) =>
-            renderItem ? (
+          {processors.map((processor) => {
+            const isFailed = failedProcessorIds.includes(processor.id);
+            return renderItem ? (
               <div key={processor.id}>
                 {renderItem({
                   processor,
                   onSelect: () => onSelect(processor.id),
+                  isFailed,
                 })}
               </div>
             ) : (
@@ -62,9 +67,10 @@ export function PaymentProcessorSelector({
                 key={processor.id}
                 processor={processor}
                 onSelect={() => onSelect(processor.id)}
+                isFailed={isFailed}
               />
-            )
-          )}
+            );
+          })}
         </div>
         <button
           type="button"

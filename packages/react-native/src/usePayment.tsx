@@ -96,7 +96,6 @@ export function usePayment(request: PaymentRequest) {
   const CheckoutView = useMemo(() => {
     if (!checkoutResult || !processor) return null;
 
-    console.log('[usePayment] Using CheckoutWebView for', processor.type);
     return (
       <CheckoutWebView
         result={checkoutResult}
@@ -130,6 +129,7 @@ export function usePayment(request: PaymentRequest) {
         state.transaction.status === 'selecting' ||
         state.transaction.status === 'processor_selected',
       activeProcessorId: state.activeProcessorId,
+      failedProcessorIds: state.failedProcessorIds,
       response: lastResponse,
       error: lastError,
       reset,
@@ -141,6 +141,7 @@ export function usePayment(request: PaymentRequest) {
       CheckoutView,
       state.transaction.status,
       state.activeProcessorId,
+      state.failedProcessorIds,
       lastResponse,
       lastError,
       reset,
