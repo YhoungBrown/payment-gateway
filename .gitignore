@@ -26,6 +26,6 @@ Thumbs.db
 .env.example
 
 # Example Mobile
- example-mobile/
+example-mobile/
 
 .vercel
