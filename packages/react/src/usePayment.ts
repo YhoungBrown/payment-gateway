@@ -62,6 +62,7 @@ export function usePayment(request: PaymentRequest) {
       pay: payFn,
       selectProcessor: selectProcessorFn,
       cancelSelection,
+      CheckoutView: null,
       isProcessing:
         state.transaction.status === 'initializing' ||
         state.transaction.status === 'processor_selected' ||
@@ -70,7 +71,9 @@ export function usePayment(request: PaymentRequest) {
       isSelecting:
         state.transaction.status === 'selecting' ||
         state.transaction.status === 'processor_selected',
+      showProcessorSelector: false,
       activeProcessorId: state.activeProcessorId,
+      hasActiveProcessorId: Boolean(state.activeProcessorId),
       failedProcessorIds: state.failedProcessorIds,
       response: lastResponse,
       error: lastError,

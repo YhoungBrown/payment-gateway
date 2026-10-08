@@ -59,10 +59,15 @@ export interface UsePaymentResult {
   pay: () => Promise<PaymentResponse>;
   selectProcessor: (processorId: string) => Promise<PaymentResponse>;
   cancelSelection: () => void;
+  CheckoutView: React.ReactNode | null;
   isProcessing: boolean;
   isSelecting: boolean;
+  showProcessorSelector: boolean;
   activeProcessorId?: string;
+  hasActiveProcessorId: boolean;
+  wasCheckoutMounted?: boolean;
   failedProcessorIds: string[];
+  response?: PaymentResponse;
   error: Error | null;
   reset: () => void;
 }
