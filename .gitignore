@@ -25,4 +25,7 @@ Thumbs.db
 # example-backend/
 .env.example
 
+# Example Mobile
+example-mobile/
+
 .vercel
