@@ -181,7 +181,7 @@ function Checkout() {
     email: 'customer@example.com',
   };
 
-  const { pay, isProcessing, isSelecting, response, error, CheckoutView, selectProcessor, cancelSelection, activeProcessorId } =
+  const { pay, isProcessing, isSelecting, showProcessorSelector, response, error, CheckoutView, selectProcessor, cancelSelection, activeProcessorId } =
     usePayment(request);
   const { processors } = usePaymentProcessors();
 
@@ -192,7 +192,7 @@ function Checkout() {
       {response && <Text>Status: {response.status}</Text>}
       {CheckoutView}
       <PaymentProcessorSelector
-        open={isSelecting}
+        open={showProcessorSelector}
         processors={processors}
         onSelect={selectProcessor}
         onCancel={cancelSelection}
@@ -231,6 +231,7 @@ class CheckoutScreen extends Component<WithPaymentGatewayProps> {
       cancelSelection,
       isProcessing,
       isSelecting,
+      showProcessorSelector,
       activeProcessorId,
       response,
       error,
@@ -249,7 +250,7 @@ class CheckoutScreen extends Component<WithPaymentGatewayProps> {
         {response && <Text>Status: {response.status}</Text>}
         {CheckoutView}
         <PaymentProcessorSelector
-          open={isSelecting || isProcessing}
+          open={showProcessorSelector}
           processors={processors}
           onSelect={selectProcessor}
           onCancel={cancelSelection}
@@ -280,14 +281,24 @@ function App() {
 }
 ```
 
-### Keeping the selector open during initialization
+### Keeping the selector open during initialization (React Native)
 
-When a user selects a processor, the SDK enters a `processor_selected` state while it fetches the checkout URL from your backend. During this time:
+After a user selects a processor, the selector should remain visible with that processor's loading indicator while the checkout is being prepared. Once the checkout WebView is ready, the selector closes so the WebView can take over.
 
-- `isSelecting` stays `true` so the selector remains visible.
-- `isProcessing` becomes `true` so the selected processor shows a loading indicator.
+The SDK provides `showProcessorSelector` directly from `usePayment` (and from `withPaymentGateway`). It handles the selector visibility correctly for both manual selection and default-processor flows:
 
-Use `open={isSelecting || isProcessing}` on `PaymentProcessorSelector` so the modal stays open until the checkout WebView is ready to take over.
+```tsx
+const { showProcessorSelector } = usePayment(request);
+
+<PaymentProcessorSelector
+  open={showProcessorSelector}
+  // ...
+/>
+```
+
+This keeps the selector open during manual selection and initialization, including the short transition before the WebView is mounted, while keeping it hidden during automatic default-processor initialization and during the redirect/verification phase after the WebView closes.
+
+If building a custom selector UI, use `showProcessorSelector` for visibility and `isProcessing` plus `activeProcessorId` to show the selected processor's loading state.
 
 ### Custom selector row with `renderItem`
 
@@ -295,7 +306,7 @@ You can keep the SDK's modal and backdrop while customizing only the processor r
 
 ```tsx
 <PaymentProcessorSelector
-  open={isSelecting || isProcessing}
+  open={showProcessorSelector}
   processors={processors}
   onSelect={selectProcessor}
   onCancel={cancelSelection}
@@ -317,10 +328,10 @@ You can keep the SDK's modal and backdrop while customizing only the processor r
 
 ### Fully custom selector
 
-If you build your own selector component, pass `activeProcessorId` and `isProcessing` to it so it can show the loading state:
+If you build your own selector component, use `showProcessorSelector` for visibility and `isProcessing` / `activeProcessorId` to show the loading state:
 
 ```tsx
-{isSelecting && (
+{showProcessorSelector && (
   <CustomProcessorSelector
     processors={processors}
     onSelect={selectProcessor}
