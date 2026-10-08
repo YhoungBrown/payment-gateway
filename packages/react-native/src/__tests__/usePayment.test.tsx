@@ -88,4 +88,51 @@ describe('usePayment', () => {
 
     await waitFor(() => expect(result.current.isSelecting).toBe(true));
   });
+
+  it('keeps selection active while a manually selected processor initializes, then hands off to CheckoutView', async () => {
+    let finishInitialization: ((value: { checkoutUrl: string }) => void) | undefined;
+    const configWithDelayedInitialization: PaymentGatewayConfig = {
+      ...baseConfig,
+      processors: baseConfig.processors.map(processor => ({
+        ...processor,
+        isDefault: false,
+      })),
+      initialize: () =>
+        new Promise(resolve => {
+          finishInitialization = resolve;
+        }),
+    };
+    const customWrapper = ({ children }: { children: React.ReactNode }) => (
+      <PaymentGatewayProvider config={configWithDelayedInitialization}>
+        {children}
+      </PaymentGatewayProvider>
+    );
+
+    const { result } = renderHook(() => usePayment(baseRequest), {
+      wrapper: customWrapper,
+    });
+
+    act(() => {
+      void result.current.selectProcessor('paystack-1');
+    });
+
+    await waitFor(() => {
+      expect(result.current.activeProcessorId).toBe('paystack-1');
+      expect(result.current.isSelecting).toBe(false);
+      expect(result.current.isProcessing).toBe(true);
+      expect(result.current.CheckoutView).toBeNull();
+      expect(result.current.showProcessorSelector).toBe(true);
+    });
+
+    act(() => {
+      finishInitialization?.({ checkoutUrl: 'https://checkout.example.com' });
+    });
+
+    await waitFor(() => {
+      expect(result.current.CheckoutView).not.toBeNull();
+      expect(result.current.isSelecting).toBe(false);
+      expect(result.current.isProcessing).toBe(true);
+      expect(result.current.showProcessorSelector).toBe(false);
+    });
+  });
 });
