@@ -18,6 +18,8 @@ export function usePayment(request: PaymentRequest) {
     reject: (reason?: Error) => void;
   } | null>(null);
 
+  const wasCheckoutMountedRef = useRef(false);
+
   const processor = useMemo(() => {
     return (
       state.defaultProcessor ||
@@ -91,10 +93,15 @@ export function usePayment(request: PaymentRequest) {
     setLastResponse(undefined);
     setLastError(null);
     resolverRef.current = null;
+    wasCheckoutMountedRef.current = false;
   }, []);
 
   const CheckoutView = useMemo(() => {
     if (!checkoutResult || !processor) return null;
+
+    // Track that the checkout view was mounted during this payment attempt
+    // so the selector does not re-open during the redirect/verification phase.
+    wasCheckoutMountedRef.current = true;
 
     return (
       <CheckoutWebView
@@ -115,25 +122,38 @@ export function usePayment(request: PaymentRequest) {
   ]);
 
   return useMemo(
-    () => ({
-      pay: payFn,
-      selectProcessor: selectProcessorFn,
-      cancelSelection,
-      CheckoutView,
-      isProcessing:
+    () => {
+      const isProcessing =
         state.transaction.status === 'initializing' ||
         state.transaction.status === 'processor_selected' ||
         state.transaction.status === 'processing' ||
-        state.transaction.status === 'verifying',
-      isSelecting:
+        state.transaction.status === 'verifying';
+      const isSelecting =
         state.transaction.status === 'selecting' ||
-        state.transaction.status === 'processor_selected',
-      activeProcessorId: state.activeProcessorId,
-      failedProcessorIds: state.failedProcessorIds,
-      response: lastResponse,
-      error: lastError,
-      reset,
-    }),
+        state.transaction.status === 'processor_selected';
+      const hasActiveProcessorId = Boolean(state.activeProcessorId);
+
+      const showProcessorSelector =
+        isSelecting ||
+        (isProcessing && hasActiveProcessorId && !wasCheckoutMountedRef.current);
+
+      return {
+        pay: payFn,
+        selectProcessor: selectProcessorFn,
+        cancelSelection,
+        CheckoutView,
+        isProcessing,
+        isSelecting,
+        showProcessorSelector,
+        activeProcessorId: state.activeProcessorId,
+        hasActiveProcessorId,
+        wasCheckoutMounted: wasCheckoutMountedRef.current,
+        failedProcessorIds: state.failedProcessorIds,
+        response: lastResponse,
+        error: lastError,
+        reset,
+      };
+    },
     [
       payFn,
       selectProcessorFn,
@@ -145,6 +165,7 @@ export function usePayment(request: PaymentRequest) {
       lastResponse,
       lastError,
       reset,
+      checkoutResult,
     ]
   );
 }
