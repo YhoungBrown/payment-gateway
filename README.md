@@ -29,14 +29,14 @@ npm install @org/payment-gateway-react-native
 Peer dependencies:
 
 - React web: `react`, `react-dom`
-- React Native: `react`, `react-native`, `react-native-webview`, `react-native-inappbrowser-reborn`
+- React Native: `react`, `react-native`, `react-native-webview`
 
 ### React Native setup
 
-Install the peer dependencies in your app and run the native build steps:
+Install the peer dependency in your app and run the native build steps:
 
 ```bash
-npm install react-native-inappbrowser-reborn react-native-webview
+npm install react-native-webview
 # iOS only
 npx pod-install
 ```
@@ -54,6 +54,7 @@ import {
 } from '@org/payment-gateway-react';
 
 const config = {
+  // Remove `debug: true` in production — it enables verbose logging for development only.
   debug: true,
   processors: [
     {
@@ -105,7 +106,7 @@ function Checkout() {
     metadata: { orderId: 'ORDER-123' },
   };
 
-  const { pay, isProcessing, isSelecting, response, error, selectProcessor, cancelSelection } =
+  const { pay, isProcessing, isSelecting, response, error, selectProcessor, cancelSelection, failedProcessorIds } =
     usePayment(request);
   const { processors } = usePaymentProcessors();
 
@@ -121,6 +122,7 @@ function Checkout() {
         processors={processors}
         onSelect={selectProcessor}
         onCancel={cancelSelection}
+        failedProcessorIds={failedProcessorIds}
       />
     </div>
   );
@@ -139,6 +141,7 @@ import {
 import { Button, Text, View } from 'react-native';
 
 const config = {
+  // Remove `debug: true` in production — it enables verbose logging for development only.
   debug: true,
   processors: [
     {
@@ -233,6 +236,7 @@ class CheckoutScreen extends Component<WithPaymentGatewayProps> {
       isSelecting,
       showProcessorSelector,
       activeProcessorId,
+      failedProcessorIds,
       response,
       error,
       CheckoutView,
@@ -256,6 +260,7 @@ class CheckoutScreen extends Component<WithPaymentGatewayProps> {
           onCancel={cancelSelection}
           isProcessing={isProcessing}
           activeProcessorId={activeProcessorId}
+          failedProcessorIds={failedProcessorIds}
           activityIndicatorColor="#007AFF"
         />
       </View>
@@ -300,7 +305,7 @@ This keeps the selector open during manual selection and initialization, includi
 
 If building a custom selector UI, use `showProcessorSelector` for visibility and `isProcessing` plus `activeProcessorId` to show the selected processor's loading state.
 
-### Custom selector row with `renderItem`
+### Custom selector row with `renderItem` (React Native)
 
 You can keep the SDK's modal and backdrop while customizing only the processor row:
 
@@ -331,20 +336,40 @@ You can keep the SDK's modal and backdrop while customizing only the processor r
 />
 ```
 
-### Fully custom selector
+### Custom selector row with `renderItem` (React web)
 
-If you build your own selector component, use `showProcessorSelector` for visibility and `isProcessing` / `activeProcessorId` to show the loading state:
+The web `PaymentProcessorSelector` does not have a loading phase — the popup opens immediately after selection, so `renderItem` receives `processor`, `onSelect`, and `isFailed` only:
 
 ```tsx
-{showProcessorSelector && (
-  <CustomProcessorSelector
-    processors={processors}
-    onSelect={selectProcessor}
-    onCancel={cancelSelection}
-    activeProcessorId={activeProcessorId}
-    isProcessing={isProcessing}
-  />
-)}
+<PaymentProcessorSelector
+  open={isSelecting}
+  processors={processors}
+  onSelect={selectProcessor}
+  onCancel={cancelSelection}
+  failedProcessorIds={failedProcessorIds}
+  renderItem={({ processor, onSelect, isFailed }) => (
+    <button onClick={onSelect} disabled={isFailed} style={{ opacity: isFailed ? 0.4 : 1 }}>
+      {processor.type.toUpperCase()}
+      {isFailed && ' — Unavailable'}
+    </button>
+  )}
+/>
+```
+
+### Fully custom selector
+
+If you build your own selector component, use `showProcessorSelector` for visibility and `isProcessing` / `activeProcessorId` to show the loading state. If your component is a Modal, pass `visible={showProcessorSelector}` instead of conditionally rendering it:
+
+```tsx
+<CustomProcessorSelector
+  processors={processors}
+  onSelect={selectProcessor}
+  onCancel={cancelSelection}
+  activeProcessorId={activeProcessorId}
+  isProcessing={isProcessing}
+  failedProcessorIds={failedProcessorIds}
+  visible={showProcessorSelector}
+/>
 ```
 
 ### Injected props
@@ -358,6 +383,7 @@ If you build your own selector component, use `showProcessorSelector` for visibi
 | `cancelSelection` | `() => void` | Cancels the processor selector. |
 | `isProcessing` | `boolean` | True while initializing, processor selection, processing, or verifying. |
 | `isSelecting` | `boolean` | True when the user needs to pick a processor or while the selected processor is initializing. |
+| `showProcessorSelector` | `boolean` | Ready-to-use visibility flag for `PaymentProcessorSelector.open` and custom selectors. |
 | `activeProcessorId` | `string \| undefined` | The processor currently being initialized/used. |
 | `response` | `PaymentResponse \| undefined` | Final payment response after completion. |
 | `error` | `Error \| null` | Last error, if any. |
@@ -404,7 +430,7 @@ const config = {
 
 Your backend should call `POST https://api.flutterwave.com/v3/payments` to create the payment and return `{ checkoutUrl: data.data.link }`. Flutterwave expects the amount in the currency's major unit (e.g. NGN Naira, not kobo), so convert from minor units if needed.
 
-After payment, Flutterwave redirects to `redirect_url` with `status`, `tx_ref`, and `transaction_id`. The SDK parses these into a `PaymentResponse`. If `verify` is configured, use `response.processorReference` (the Flutterwave `transaction_id`) to verify server-to-server via `GET https://api.flutterwave.com/v3/transactions/{transaction_id}/verify`.
+After payment, Flutterwave redirects to `redirect_url` with `status`, `tx_ref`, and `transaction_id`. The SDK parses these into a `PaymentResponse`. Use `response.processorReference` (the Flutterwave `transaction_id`) in your `verify` callback to confirm the payment server-to-server via `GET https://api.flutterwave.com/v3/transactions/{transaction_id}/verify`.
 
 ## Interswitch Web Checkout client-side initialization
 
@@ -434,18 +460,15 @@ In React Native, all processors open inside a WebView. The Interswitch adapter b
 
 ## Verification
 
-The `verify` callback is optional for Paystack and Flutterwave. If you do not provide it, the SDK trusts the status returned in the processor callback URL.
+The `verify` callback is **required**. Paystack and Interswitch do not embed an
+authoritative payment status in their callback URLs (Paystack returns only a
+reference; Interswitch returns only a transaction reference). Even for
+Flutterwave, which does include a status, server-side verification is the
+only way to confirm a payment independently of the client.
 
-For **Interswitch in React Native, `verify` is required**. Interswitch only returns a transaction reference in the WebView redirect and explicitly recommends requerying their verification endpoint before concluding that a payment was successful.
-
-### No verification
-
-```ts
-const config = {
-  processors: [...],
-  // No verify callback. The SDK uses the processor callback status.
-};
-```
+The `verify` callback is always called after the checkout WebView or popup
+closes. If it returns `{ verified: true }`, the SDK reports `success`. If it
+returns `{ verified: false }`, the SDK reports `failed`.
 
 ### Single processor
 
@@ -518,11 +541,10 @@ const config = {
 
 ### Verification flow
 
-1. The user completes payment in a popup (web), WebView (React Native Paystack/Flutterwave), or browser (React Native Interswitch).
-2. The package parses the callback URL into a `PaymentResponse` (WebView/popup) or reports `pending` (Interswitch browser).
-3. If `verify` is configured, the package calls it and waits for `{ verified: true }` before returning `success`.
-4. If `verify` returns `{ verified: false }`, the package returns `status: 'failed'` with the verification message.
-5. For Interswitch in React Native without `verify`, closing the browser returns `status: 'cancelled'` because the SDK cannot confirm the outcome.
+1. The user completes payment in a popup (web) or WebView (React Native).
+2. The package parses the callback URL into a `PaymentResponse`.
+3. The `verify` callback is called. If it returns `{ verified: true }`, the SDK returns `success`.
+4. If `verify` returns `{ verified: false }`, the SDK returns `status: 'failed'` with the verification message.
 
 ## Processor fallback
 
@@ -540,8 +562,7 @@ The `callbackUrl` you set in `ProcessorConfig` must match the callback URL confi
 |-----------|---------------------------|-------------------|
 | Paystack | Your backend | Set in backend and pass the same value to `ProcessorConfig.callbackUrl`. |
 | Flutterwave | Your backend | Set in backend and pass the same value to `ProcessorConfig.callbackUrl`. |
-| Interswitch (WebView/popup) | Your backend or client | Set `ProcessorConfig.callbackUrl` to the same URL passed as `site_redirect_url`. |
-| Interswitch (React Native browser) | Client | Set `ProcessorConfig.callbackUrl` to the URL Interswitch should redirect to after payment. The SDK uses it to detect completion inside the browser session. |
+| Interswitch | Your backend or client | Set `ProcessorConfig.callbackUrl` to the same URL passed as `site_redirect_url`. |
 
 If the URLs do not match, the SDK will not detect the payment completion.
 
@@ -571,6 +592,8 @@ npm run build      # Build all packages
 npm run typecheck  # Type-check all packages
 npm run test       # Run unit tests
 npm run test:e2e   # Run Playwright web E2E tests
+npm run lint       # Lint all packages
+npm run clean      # Remove build output
 ```
 
 ## License
