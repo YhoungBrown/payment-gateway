@@ -18,6 +18,31 @@ It delegates all processor API calls to your own backend through `initialize` an
 - Backend `initialize` and `verify` callbacks keep secrets server-side.
 - Debug logging gated by a provider flag.
 
+## Amount format
+
+All amounts are in **minor units** (kobo for NGN, cents for USD, etc.). The SDK uses
+`amount` directly when building a client-side checkout form (Interswitch).
+
+For processors that require server-side initialization, it is your backend's
+responsibility to convert if the processor expects major units.
+
+| Processor    | Expects       | Backend should send |
+|--------------|---------------|---------------------|
+| Paystack     | Minor units   | `request.amount` as-is (e.g. `10000` = ₦100.00) |
+| Flutterwave  | Major units   | `request.amount / 100` (e.g. `100` = ₦100.00) |
+| Interswitch  | Minor units   | SDK builds the form client-side and sends `request.amount` as-is |
+
+Example backend snippet:
+
+```ts
+// In your initialize callback, convert amount for Flutterwave:
+if (processor.type === 'flutterwave') {
+  const majorAmount = request.amount / 100;
+  // ...pass majorAmount to Flutterwave API
+}
+// Paystack expects kobo — pass request.amount unchanged.
+```
+
 ## Installation
 
 ```bash
@@ -428,7 +453,7 @@ const config = {
 };
 ```
 
-Your backend should call `POST https://api.flutterwave.com/v3/payments` to create the payment and return `{ checkoutUrl: data.data.link }`. Flutterwave expects the amount in the currency's major unit (e.g. NGN Naira, not kobo), so convert from minor units if needed.
+Your backend should call `POST https://api.flutterwave.com/v3/payments` to create the payment and return `{ checkoutUrl: data.data.link }`. Flutterwave expects the amount in the currency's major unit (e.g. NGN Naira, not kobo). See [Amount format](#amount-format) for conversion guidance.
 
 After payment, Flutterwave redirects to `redirect_url` with `status`, `tx_ref`, and `transaction_id`. The SDK parses these into a `PaymentResponse`. Use `response.processorReference` (the Flutterwave `transaction_id`) in your `verify` callback to confirm the payment server-to-server via `GET https://api.flutterwave.com/v3/transactions/{transaction_id}/verify`.
 
