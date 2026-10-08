@@ -22,6 +22,7 @@ yarn-error.log*
 Thumbs.db
 
 # Example backend (kept local, can be deployed to Vercel separately)
-£ example-backend/
+# example-backend/
+.env.example
 
 .vercel
