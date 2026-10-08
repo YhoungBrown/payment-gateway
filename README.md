@@ -315,10 +315,15 @@ You can keep the SDK's modal and backdrop while customizing only the processor r
   activityIndicatorColor="#007AFF"
   presentation="fullscreen"
   backgroundColor="blue"
-  renderItem={({ processor, onSelect, isLoading }) => (
-    <TouchableOpacity onPress={onSelect} disabled={isLoading}>
-      <Text style={{ opacity: isLoading ? 0.6 : 1 }}>
+  renderItem={({ processor, onSelect, isLoading, isFailed }) => (
+    <TouchableOpacity
+      onPress={onSelect}
+      disabled={isLoading || isFailed}
+      style={{ opacity: isFailed ? 0.4 : isLoading ? 0.6 : 1 }}
+    >
+      <Text>
         {processor.type.toUpperCase()}
+        {isFailed && ' — Unavailable'}
       </Text>
       {isLoading && <ActivityIndicator color="#007AFF" />}
     </TouchableOpacity>
