@@ -8,4 +8,4 @@ export {
   withPaymentGateway,
   type WithPaymentGatewayProps,
 } from './withPaymentGateway';
-export { CheckoutBrowser } from './checkout/CheckoutBrowser';
+
