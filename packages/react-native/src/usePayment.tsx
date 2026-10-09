@@ -4,6 +4,7 @@ import {
   type InitializeResult,
   type PaymentRequest,
   type PaymentResponse,
+  type ProcessorConfig,
 } from '@org/payment-gateway-core';
 import { CheckoutWebView } from './checkout/CheckoutWebView';
 
@@ -52,7 +53,7 @@ export function usePayment(request: PaymentRequest) {
   }, [processor, finalizeCheckout]);
 
   const launchCheckout = useCallback(
-    async (result: InitializeResult) => {
+    async (result: InitializeResult, _processor: ProcessorConfig) => {
       return new Promise<PaymentResponse>((resolve, reject) => {
         resolverRef.current = { resolve, reject };
         setCheckoutResult(result);

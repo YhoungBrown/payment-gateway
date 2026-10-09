@@ -381,9 +381,80 @@ The web `PaymentProcessorSelector` does not have a loading phase — the popup o
 />
 ```
 
-### Fully custom selector
+### Full-screen or fully custom selector shell (React web)
 
-If you build your own selector component, use `showProcessorSelector` for visibility and `isProcessing` / `activeProcessorId` to show the loading state. If your component is a Modal, pass `visible={showProcessorSelector}` instead of conditionally rendering it:
+The web `PaymentProcessorSelector` currently lets you customize the **processor rows** with `renderItem`, but it does not expose props to restyle or resize its modal shell (for example, to make the built-in modal full-screen). `renderItem` only changes the rows; it does not change the built-in backdrop, panel, title, or cancel-button layout.
+
+To make the entire selector full-screen or match your app's design, render your own selector UI instead of `PaymentProcessorSelector`. Use `isSelecting` to control its visibility in the React web package, and use `processors`, `selectProcessor`, `cancelSelection`, and `failedProcessorIds` from the hooks:
+
+```tsx
+function Checkout() {
+  const request = {
+    amount: 10000,
+    currency: 'NGN',
+    reference: 'ORDER-123',
+    email: 'customer@example.com',
+  };
+
+  const {
+    pay,
+    selectProcessor,
+    cancelSelection,
+    isSelecting,
+    isProcessing,
+    failedProcessorIds,
+  } = usePayment(request);
+  const { processors } = usePaymentProcessors();
+
+  return (
+    <>
+      <button onClick={pay} disabled={isProcessing}>
+        {isProcessing ? 'Processing…' : 'Pay'}
+      </button>
+
+      {isSelecting && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Select a payment method"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            padding: 24,
+            background: 'white',
+          }}
+        >
+          <h2>Select a payment method</h2>
+          {processors.map((processor) => {
+            const isFailed = failedProcessorIds.includes(processor.id);
+            return (
+              <button
+                key={processor.id}
+                onClick={() => selectProcessor(processor.id)}
+                disabled={isFailed}
+              >
+                {processor.type.toUpperCase()}
+                {isFailed ? ' — Unavailable' : ''}
+              </button>
+            );
+          })}
+          <button onClick={cancelSelection}>Cancel</button>
+        </div>
+      )}
+    </>
+  );
+}
+```
+
+Replace the inline styles with your own CSS/design system to control the full-screen layout, backdrop, spacing, animations, and responsive behavior. Keep failed processors disabled as shown so a processor that failed cannot be retried in the same payment attempt. The `showProcessorSelector` value is intended for the React Native selector flow; for this React web custom selector, use `isSelecting`.
+
+### Fully custom selector (React Native)
+
+For React Native, if you build your own selector component, use `showProcessorSelector` for visibility and `isProcessing` / `activeProcessorId` to show the loading state. If your component is a Modal, pass `visible={showProcessorSelector}` instead of conditionally rendering it. For a fully custom React web selector—including a full-screen design—use the web-specific example above and control visibility with `isSelecting`:
 
 ```tsx
 <CustomProcessorSelector
@@ -590,6 +661,84 @@ The `callbackUrl` you set in `ProcessorConfig` must match the callback URL confi
 | Interswitch | Your backend or client | Set `ProcessorConfig.callbackUrl` to the same URL passed as `site_redirect_url`. |
 
 If the URLs do not match, the SDK will not detect the payment completion.
+
+### Same-origin requirement (web only)
+
+**For web apps**, the `callbackUrl` must use the same origin (protocol + hostname + port) as the web app page. The SDK monitors the checkout popup and needs to read its URL when the processor redirects back. Browser security prevents the app from reading a popup URL while it is on a different origin. When the callback uses the app's origin, the SDK can recognize the callback, close the popup, and continue to `verify`.
+
+This requirement is specific to the web popup. React Native uses a WebView and can intercept its navigation URL directly; its callback does not need to share the app's origin.
+
+**This does not mean every SDK user must deploy to Vercel or configure rewrites.** If your web app and callback are already on the same origin, the SDK can detect the callback without any additional routing configuration. A frontend-host rewrite is only needed when your callback/backend is on a different origin from your web app and you want the browser-facing callback URL to remain same-origin.
+
+#### Local development with a separate-origin backend
+
+For example, `npm run dev` may serve a web app at `http://localhost:5173` while its callback points to `https://api.theirstore.com/callback`. These are different origins. The browser blocks the app from reading the popup's URL after it navigates to the API callback, so the SDK cannot detect that callback; the popup may remain open on the backend's callback response. A frontend-host proxy/rewrite can address this by making the callback path appear under the app's origin. Alternatively, use a local backend/callback on the same origin if your development setup supports it.
+
+This is an origin restriction in browser popup security, not a Vite-specific limitation. It applies whenever a web app's checkout popup returns to a different origin.
+
+#### Scenario 1: Same origin already (easiest)
+
+If your backend and frontend are on the same domain, you don't need to change anything:
+
+```
+Frontend:  https://theirstore.com
+Backend:   https://theirstore.com/api/*
+Callback:  https://theirstore.com/callback
+```
+
+The processor redirects the popup to `https://theirstore.com/callback` — the same origin as the parent page. No proxy or rewrite is needed for origin purposes. The SDK detects the callback, closes the popup, and calls `verify`.
+
+#### Scenario 2: Separate API subdomain (common)
+
+If your frontend and backend are on different subdomains:
+
+```
+Frontend:  https://theirstore.com
+Backend:   https://api.theirstore.com
+Callback:  https://api.theirstore.com/callback   ← cross-origin, won't work
+```
+
+In this setup, make the callback path on the frontend's origin forward to the backend server-side. This is a **reverse proxy/rewrite at the frontend's hosting or web-server layer**; it is not a browser redirect. The browser continues to see the frontend origin while that server forwards the request to the API. Your processor's `callbackUrl` must point to your **frontend** domain:
+
+```
+callbackUrl: 'https://theirstore.com/callback'
+```
+
+The browser sees `https://theirstore.com/callback`, and the hosting layer forwards the request to `https://api.theirstore.com/callback` without changing the URL shown in the popup.
+
+**Next.js** — configure the frontend hosting/server (`next.config.js`):
+
+```js
+module.exports = {
+  async rewrites() {
+    return [
+      { source: '/callback', destination: 'https://api.theirstore.com/callback' },
+      { source: '/payment-response', destination: 'https://api.theirstore.com/payment-response' },
+      { source: '/flutterwave-callback', destination: 'https://api.theirstore.com/flutterwave-callback' },
+    ];
+  },
+};
+```
+
+**Vercel** — configure rewrites in the frontend project's `vercel.json` so Vercel keeps the browser on the frontend origin while forwarding the request to your backend:
+
+```json
+{
+  "rewrites": [
+    { "source": "/callback", "destination": "https://api.theirstore.com/callback" },
+    { "source": "/payment-response", "destination": "https://api.theirstore.com/payment-response" },
+    { "source": "/flutterwave-callback", "destination": "https://api.theirstore.com/flutterwave-callback" },
+    { "source": "/initialize", "destination": "https://api.theirstore.com/initialize" },
+    { "source": "/verify", "destination": "https://api.theirstore.com/verify" },
+    { "source": "/verify-flutterwave", "destination": "https://api.theirstore.com/verify-flutterwave" },
+    { "source": "/verify-interswitch", "destination": "https://api.theirstore.com/verify-interswitch" }
+  ]
+}
+```
+
+Add the callback paths and the initialize/verification API paths your integration actually uses. These rewrites belong to the service serving the **frontend origin**. Other frontend hosting platforms (such as Netlify, Cloudflare, or NGINX) provide equivalent reverse-proxy/rewrite configuration; configure the rules there if you do not host the frontend on Vercel. The frontend build tool does not determine where these production rules go.
+
+> **React Native:** This same-origin setup is not required. React Native uses a WebView that can intercept navigation URLs before the callback page loads.
 
 ## Metadata
 
