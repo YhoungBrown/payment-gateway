@@ -10,6 +10,11 @@ It delegates all processor API calls to your own backend through `initialize` an
 - `@org/payment-gateway-react` — React bindings (popup checkout).
 - `@org/payment-gateway-react-native` — React Native bindings (WebView checkout).
 
+## Example applications
+
+- [`example-mobile/`](./example-mobile/) — React Native checkout example.
+- [`example-web/`](./example-web/) — React web checkout example. From that directory, run `npm install` and then `npm run dev`. Its install script installs and builds the local SDK workspaces; no separate SDK build step is needed.
+
 ## Features
 
 - Single `pay()` entry point.
