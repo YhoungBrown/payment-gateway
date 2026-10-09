@@ -24,7 +24,8 @@ import { createLogger } from './logger';
 import { validateAmount, validateCurrency } from './utils/money';
 
 export type LaunchCheckout = (
-  result: InitializeResult
+  result: InitializeResult,
+  processor: ProcessorConfig
 ) => Promise<PaymentResponse>;
 
 export interface PaymentContextValue {
@@ -199,7 +200,7 @@ export function PaymentGatewayProvider({
     ): Promise<PaymentResponse> => {
       dispatch({ type: 'CHECKOUT_INITIALIZED' });
       const result = await initializeCheckout(request, processor);
-      const response = await launchCheckout(result);
+      const response = await launchCheckout(result, processor);
       return verifyResponse(response);
     },
     [initializeCheckout, verifyResponse]

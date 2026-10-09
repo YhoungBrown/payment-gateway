@@ -45,10 +45,28 @@ export async function launchCheckoutPopup(
       writePostForm(popup, result.checkoutUrl, result.postData);
     }
 
-    const interval = window.setInterval(() => {
+    let interval: number | undefined;
+    let settled = false;
+
+    const cleanup = () => {
+      if (interval !== undefined) {
+        window.clearInterval(interval);
+      }
+
+      try {
+        popup?.removeEventListener('load', checkCallbackUrl);
+      } catch {
+        // Cross-origin popup access may prevent removing the listener.
+      }
+    };
+
+    const checkCallbackUrl = () => {
+      if (settled) return;
+
       try {
         if (!popup || popup.closed) {
-          clearInterval(interval);
+          settled = true;
+          cleanup();
           resolve({
             status: 'cancelled',
             reference: '',
@@ -58,19 +76,60 @@ export async function launchCheckoutPopup(
           return;
         }
 
-        const popupUrl = popup.location.href;
-        if (popupUrl && popupUrl.startsWith(processor.callbackUrl)) {
-          clearInterval(interval);
+        const callbackUrl = popup.location.href;
+        if (isCallbackUrl(callbackUrl, processor.callbackUrl)) {
+          settled = true;
+          cleanup();
           popup.close();
-          const adapter = getAdapter(processor.type);
-          const response = adapter.parseCallback(popupUrl, processor);
-          resolve(response);
+
+          try {
+            const adapter = getAdapter(processor.type);
+            const response = adapter.parseCallback(callbackUrl, processor);
+
+            // Let the browser process the popup close before resolving. In
+            // particular, cancelled callbacks skip backend verification, so the
+            // caller may otherwise immediately show a blocking alert that delays
+            // Chrome's visible close of the popup.
+            window.setTimeout(() => resolve(response), 0);
+          } catch (error) {
+            reject(error instanceof Error ? error : new Error(String(error)));
+          }
         }
       } catch {
-        // Cross-origin URLs will throw until same-origin callback
+        // Cross-origin URLs throw until the popup reaches the callback origin.
       }
-    }, 500);
+    };
+
+    // Listen for navigations that load the callback page, so we can react as
+    // soon as the popup reaches our origin instead of waiting for the poll.
+    // Some browsers restrict event access on a cross-origin WindowProxy, so
+    // the short polling interval below remains the reliable fallback.
+    try {
+      popup.addEventListener('load', checkCallbackUrl);
+    } catch {
+      // Fall back to polling when the browser blocks cross-origin access.
+    }
+
+    interval = window.setInterval(checkCallbackUrl, 100);
   });
+}
+
+function isCallbackUrl(currentUrl: string, callbackUrl: string): boolean {
+  try {
+    const current = new URL(currentUrl);
+    const callback = new URL(callbackUrl);
+    const normalizePath = (pathname: string) =>
+      pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+
+    // Processor callbacks append query parameters (including status/reference),
+    // so identify the configured callback by origin and path, not full URL text.
+    return (
+      current.origin === callback.origin &&
+      normalizePath(current.pathname) === normalizePath(callback.pathname)
+    );
+  } catch {
+    return false;
+  }
 }
 
 function writePostForm(
