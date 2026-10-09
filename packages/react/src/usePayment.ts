@@ -4,6 +4,7 @@ import {
   type InitializeResult,
   type PaymentRequest,
   type PaymentResponse,
+  type ProcessorConfig,
 } from '@org/payment-gateway-core';
 import { launchCheckoutPopup } from './checkout/CheckoutPopup';
 
@@ -13,16 +14,10 @@ export function usePayment(request: PaymentRequest) {
   const [lastError, setLastError] = useState<Error | null>(null);
 
   const launchCheckout = useCallback(
-    async (result: InitializeResult) => {
-      const processor =
-        state.defaultProcessor ||
-        state.processors.find((p) => p.id === state.activeProcessorId);
-      if (!processor) {
-        throw new Error('No processor available for checkout launch');
-      }
+    async (result: InitializeResult, processor: ProcessorConfig) => {
       return launchCheckoutPopup(result, processor);
     },
-    [state]
+    []
   );
 
   const handlePayment = useCallback(
