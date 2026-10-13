@@ -22,15 +22,19 @@ import { initialState, paymentReducer } from './reducer';
 import { getAdapter } from './adapters';
 import { createLogger } from './logger';
 import { validateAmount, validateCurrency } from './utils/money';
+import { TimeoutError, withTimeout } from './utils/timeout';
+import type { PaymentAction } from './types/actions';
 
 export type LaunchCheckout = (
   result: InitializeResult,
   processor: ProcessorConfig
 ) => Promise<PaymentResponse>;
 
+const DEFAULT_INITIALIZE_TIMEOUT_MS = 20_000;
+
 export interface PaymentContextValue {
   state: ReturnType<typeof paymentReducer>;
-  dispatch: React.Dispatch<import('./reducer').PaymentAction>;
+  dispatch: React.Dispatch<PaymentAction>;
   config: PaymentGatewayConfig;
   pay: (request: PaymentRequest, launchCheckout: LaunchCheckout) => Promise<PaymentResponse>;
   selectProcessor: (
@@ -104,6 +108,18 @@ export function PaymentGatewayProvider({
     request?: PaymentRequest;
   } | null>(null);
 
+  const resolveInitializeTimeout = useCallback(() => {
+    const value = config.initializeTimeoutMs;
+    if (
+      typeof value === 'number' &&
+      Number.isFinite(value) &&
+      value > 0
+    ) {
+      return value;
+    }
+    return DEFAULT_INITIALIZE_TIMEOUT_MS;
+  }, [config.initializeTimeoutMs]);
+
   const initializeCheckout = useCallback(
     async (
       request: PaymentRequest,
@@ -117,16 +133,23 @@ export function PaymentGatewayProvider({
       validateCurrency(request.currency);
 
       const adapter = getAdapter(processor.type);
-      const result = await adapter.initializeCheckout(
-        request,
-        processor,
-        config.initialize
+      const timeoutMs = resolveInitializeTimeout();
+
+      const result = await withTimeout(
+        adapter.initializeCheckout(request, processor, config.initialize),
+        timeoutMs,
+        () => {
+          logger.warn('Processor initialization timed out', {
+            processorId: processor.id,
+            timeoutMs,
+          });
+        }
       );
 
       logger.log('Checkout URL initialized', { processorId: processor.id });
       return result;
     },
-    [config.initialize, logger]
+    [config.initialize, logger, resolveInitializeTimeout]
   );
 
   const verifyResponse = useCallback(
@@ -246,6 +269,38 @@ export function PaymentGatewayProvider({
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
         const available = getAvailableProcessors(processor.id);
+
+        if (error instanceof TimeoutError) {
+          const timeoutMs = resolveInitializeTimeout();
+          const showSelector = available.length > 0;
+          const timeoutError = new TimeoutError(
+            `Processor timed out after ${timeoutMs}ms while fetching checkout URL`
+          );
+
+          dispatch({
+            type: 'PROCESSOR_TIMED_OUT',
+            payload: {
+              processorId: processor.id,
+              timeoutMs,
+              showSelector,
+            },
+          });
+
+          if (showSelector) {
+            return new Promise((resolve, reject) => {
+              selectionRef.current = { resolve, reject, launchCheckout, request };
+            });
+          }
+
+          if (selectionRef.current) {
+            selectionRef.current.reject(timeoutError);
+            selectionRef.current = null;
+          }
+
+          dispatch({ type: 'PAYMENT_ERROR', payload: { error: timeoutError } });
+          throw timeoutError;
+        }
+
         if (available.length > 0) {
           return handleProcessorFailure(processor.id, launchCheckout, request);
         }
@@ -257,7 +312,14 @@ export function PaymentGatewayProvider({
         throw err;
       }
     },
-    [processors, launchProcessor, logger, getAvailableProcessors, handleProcessorFailure]
+    [
+      processors,
+      launchProcessor,
+      logger,
+      getAvailableProcessors,
+      handleProcessorFailure,
+      resolveInitializeTimeout,
+    ]
   );
 
   const pay = useCallback(
@@ -294,6 +356,38 @@ export function PaymentGatewayProvider({
         } catch (error) {
           const err = error instanceof Error ? error : new Error(String(error));
           const available = getAvailableProcessors(defaultProcessor.id);
+
+          if (error instanceof TimeoutError) {
+            const timeoutMs = resolveInitializeTimeout();
+            const showSelector = available.length > 0;
+            const timeoutError = new TimeoutError(
+              `Processor timed out after ${timeoutMs}ms while fetching checkout URL`
+            );
+
+            dispatch({
+              type: 'PROCESSOR_TIMED_OUT',
+              payload: {
+                processorId: defaultProcessor.id,
+                timeoutMs,
+                showSelector,
+              },
+            });
+
+            if (showSelector) {
+              return new Promise((resolve, reject) => {
+                selectionRef.current = {
+                  resolve,
+                  reject,
+                  launchCheckout,
+                  request,
+                };
+              });
+            }
+
+            dispatch({ type: 'PAYMENT_ERROR', payload: { error: timeoutError } });
+            throw timeoutError;
+          }
+
           if (available.length > 0) {
             return handleProcessorFailure(
               defaultProcessor.id,
@@ -313,7 +407,14 @@ export function PaymentGatewayProvider({
         selectionRef.current = { resolve, reject, launchCheckout, request };
       });
     },
-    [defaultProcessor, launchProcessor, logger, getAvailableProcessors, handleProcessorFailure]
+    [
+      defaultProcessor,
+      launchProcessor,
+      logger,
+      getAvailableProcessors,
+      handleProcessorFailure,
+      resolveInitializeTimeout,
+    ]
   );
 
   const cancelSelection = useCallback((): void => {

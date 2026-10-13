@@ -87,4 +87,31 @@ describe('launchCheckoutPopup', () => {
     });
     expect(popup.close).toHaveBeenCalledOnce();
   });
+
+  it('returns failed when the popup closes without ever reaching the callback URL', async () => {
+    vi.useFakeTimers();
+    const callbackUrl = 'https://shop.example.com/callback';
+    const processor: ProcessorConfig = {
+      id: 'paystack-1',
+      type: 'paystack',
+      callbackUrl,
+    };
+    const { popup, listeners } = createPopup('https://checkout.paystack.com');
+    window.open = vi.fn().mockReturnValue(popup);
+
+    const payment = launchCheckoutPopup(
+      { checkoutUrl: 'https://checkout.paystack.com/payment' },
+      processor
+    );
+
+    // Simulate the popup being closed manually without ever hitting the callback.
+    popup.closed = true;
+    listeners.get('load')?.(new Event('load'));
+    await vi.advanceTimersByTimeAsync(0);
+
+    await expect(payment).resolves.toMatchObject({
+      status: 'failed',
+      processor: 'paystack',
+    });
+  });
 });

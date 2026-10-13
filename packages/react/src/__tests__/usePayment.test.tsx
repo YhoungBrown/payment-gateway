@@ -130,4 +130,36 @@ describe('usePayment', () => {
 
     await waitFor(() => expect(result.current.isSelecting).toBe(true));
   });
+
+  it('marks processor as timed out when initialization exceeds timeout and keeps it selectable', { timeout: 15000 }, async () => {
+    const slowInitializeConfig: PaymentGatewayConfig = {
+      ...baseConfig,
+      initializeTimeoutMs: 500,
+      initialize: () => new Promise(() => {}),
+    };
+
+    const slowWrapper = ({ children }: { children: React.ReactNode }) => (
+      <PaymentGatewayProvider config={slowInitializeConfig}>
+        {children}
+      </PaymentGatewayProvider>
+    );
+
+    const { result } = renderHook(() => usePayment(baseRequest), {
+      wrapper: slowWrapper,
+    });
+
+    act(() => {
+      result.current.pay().catch(() => {});
+    });
+
+    await waitFor(() => {
+      expect(result.current.isProcessing).toBe(true);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSelecting).toBe(true);
+      expect(result.current.failedProcessorIds).toHaveLength(0);
+      expect(result.current.timedOutProcessorIds).toHaveLength(1);
+    }, { timeout: 3000 });
+  });
 });

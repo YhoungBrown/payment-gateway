@@ -13,6 +13,7 @@ interface DefaultProcessorItemProps {
   onSelect: () => void;
   isLoading?: boolean;
   isFailed?: boolean;
+  isTimedOut?: boolean;
   activityIndicatorColor?: string;
 }
 
@@ -21,23 +22,35 @@ export function DefaultProcessorItem({
   onSelect,
   isLoading = false,
   isFailed = false,
+  isTimedOut = false,
   activityIndicatorColor,
 }: DefaultProcessorItemProps) {
+  // Timed-out processors are NOT disabled — the user can retry them.
+  const disabled = isLoading || (isFailed && !isTimedOut);
+  const isUnavailable = isFailed && !isTimedOut;
+
   return (
     <TouchableOpacity
-      style={[styles.button, isFailed && styles.buttonFailed]}
+      style={[
+        styles.button,
+        isUnavailable && styles.buttonFailed,
+        isTimedOut && styles.buttonTimedOut,
+      ]}
       onPress={onSelect}
-      disabled={isLoading || isFailed}
-      activeOpacity={isLoading || isFailed ? 1 : 0.2}
+      disabled={disabled}
+      activeOpacity={disabled ? 1 : 0.2}
     >
       <View style={styles.content}>
         <View>
-          <Text style={[styles.text, isLoading && styles.textFaded]}>
+          <Text style={[styles.text, (isLoading || disabled) && styles.textFaded]}>
             {processor.type.toUpperCase()}
             {processor.isDefault ? ' (default)' : ''}
           </Text>
-          {isFailed && (
+          {isUnavailable && (
             <Text style={styles.failedText}>Unavailable</Text>
+          )}
+          {isTimedOut && (
+            <Text style={styles.timedOutText}>Timed out</Text>
           )}
         </View>
         {isLoading && (
@@ -62,6 +75,10 @@ const styles = StyleSheet.create({
     borderColor: '#ffcdd2',
     backgroundColor: '#ffebee',
   },
+  buttonTimedOut: {
+    borderColor: '#ffe0b2',
+    backgroundColor: '#fff3e0',
+  },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -76,6 +93,11 @@ const styles = StyleSheet.create({
   failedText: {
     fontSize: 12,
     color: '#c62828',
+    marginTop: 2,
+  },
+  timedOutText: {
+    fontSize: 12,
+    color: '#e65100',
     marginTop: 2,
   },
 });

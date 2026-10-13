@@ -47,6 +47,7 @@ export async function launchCheckoutPopup(
 
     let interval: number | undefined;
     let settled = false;
+    let reachedCallback = false;
 
     const cleanup = () => {
       if (interval !== undefined) {
@@ -67,6 +68,21 @@ export async function launchCheckoutPopup(
         if (!popup || popup.closed) {
           settled = true;
           cleanup();
+
+          // If the popup closed without ever reaching the callback URL,
+          // the checkout failed to load (e.g. processor is down with 503).
+          // Report it as failed so the SDK can mark the processor as
+          // unavailable and reopen the selector.
+          if (!reachedCallback) {
+            resolve({
+              status: 'failed',
+              reference: '',
+              processor: processor.type,
+              message: 'Checkout failed to load',
+            });
+            return;
+          }
+
           resolve({
             status: 'cancelled',
             reference: '',
@@ -78,6 +94,7 @@ export async function launchCheckoutPopup(
 
         const callbackUrl = popup.location.href;
         if (isCallbackUrl(callbackUrl, processor.callbackUrl)) {
+          reachedCallback = true;
           settled = true;
           cleanup();
           popup.close();
