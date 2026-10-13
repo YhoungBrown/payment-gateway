@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { initialState, paymentReducer } from '../reducer';
 import type { ProcessorConfig } from '../types';
+import type { PaymentAction } from '../types/actions';
 
 const processor: ProcessorConfig = {
   id: 'paystack-1',
@@ -57,5 +58,37 @@ describe('paymentReducer', () => {
     });
     expect(state.transaction.status).toBe('error');
     expect(state.transaction.error).toBe(error);
+  });
+
+  it('should handle processor timeout and keep selector open when possible', () => {
+    const action: PaymentAction = {
+      type: 'PROCESSOR_TIMED_OUT',
+      payload: {
+        processorId: 'paystack-1',
+        timeoutMs: 2000,
+        showSelector: true,
+      },
+    };
+    const state = paymentReducer(initialState, action);
+
+    expect(state.transaction.status).toBe('selecting');
+    expect(state.transaction.error?.message).toContain('timed out');
+    expect(state.failedProcessorIds).toEqual([]);
+    expect(state.timedOutProcessorIds).toEqual(['paystack-1']);
+  });
+
+  it('should clear timedOutProcessorIds on START_PAYMENT', () => {
+    const withTimeout = paymentReducer(initialState, {
+      type: 'PROCESSOR_TIMED_OUT',
+      payload: {
+        processorId: 'paystack-1',
+        timeoutMs: 2000,
+        showSelector: true,
+      },
+    });
+    expect(withTimeout.timedOutProcessorIds).toEqual(['paystack-1']);
+
+    const afterRestart = paymentReducer(withTimeout, { type: 'START_PAYMENT' });
+    expect(afterRestart.timedOutProcessorIds).toEqual([]);
   });
 });

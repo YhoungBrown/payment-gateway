@@ -135,4 +135,36 @@ describe('usePayment', () => {
       expect(result.current.showProcessorSelector).toBe(false);
     });
   });
-});
+
+  it('surfaces initialize timeout and keeps processor selectable', { timeout: 15000 }, async () => {
+    const configWithTimeout: PaymentGatewayConfig = {
+      ...baseConfig,
+      initializeTimeoutMs: 500,
+      initialize: () => new Promise(() => {}),
+    };
+
+    const timeoutWrapper = ({ children }: { children: React.ReactNode }) => (
+      <PaymentGatewayProvider config={configWithTimeout}>
+        {children}
+      </PaymentGatewayProvider>
+    );
+
+    const { result } = renderHook(() => usePayment(baseRequest), {
+      wrapper: timeoutWrapper,
+    });
+
+    act(() => {
+      result.current.pay().catch(() => {});
+    });
+
+    await waitFor(() => {
+      expect(result.current.isProcessing).toBe(true);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSelecting).toBe(true);
+      expect(result.current.failedProcessorIds).toHaveLength(0);
+      expect(result.current.timedOutProcessorIds).toHaveLength(1);
+      }, { timeout: 3000 });
+  });
+});

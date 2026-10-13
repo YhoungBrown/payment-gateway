@@ -22,6 +22,7 @@ It delegates all processor API calls to your own backend through `initialize` an
 - No default processor? A selector UI is shown (use the built-in one or build your own).
 - Backend `initialize` and `verify` callbacks keep secrets server-side.
 - Debug logging gated by a provider flag.
+- Optional checkout initialization timeout (default 20 s) via `initializeTimeoutMs`. Timed-out processors stay retryable.
 
 ## Amount format
 
@@ -86,6 +87,9 @@ import {
 const config = {
   // Remove `debug: true` in production — it enables verbose logging for development only.
   debug: true,
+  // Optional: abort checkout initialization after N milliseconds (default 20 000).
+  // Timed-out processors stay selectable so the user can retry them.
+  // initializeTimeoutMs: 20000,
   processors: [
     {
       id: 'flutterwave-1',
@@ -173,6 +177,9 @@ import { Button, Text, View } from 'react-native';
 const config = {
   // Remove `debug: true` in production — it enables verbose logging for development only.
   debug: true,
+  // Optional: abort checkout initialization after N milliseconds (default 20 000).
+  // Timed-out processors stay selectable so the user can retry them.
+  // initializeTimeoutMs: 20000,
   processors: [
     {
       id: 'flutterwave-1',
@@ -267,6 +274,7 @@ class CheckoutScreen extends Component<WithPaymentGatewayProps> {
       showProcessorSelector,
       activeProcessorId,
       failedProcessorIds,
+      timedOutProcessorIds,
       response,
       error,
       CheckoutView,
@@ -291,6 +299,7 @@ class CheckoutScreen extends Component<WithPaymentGatewayProps> {
           isProcessing={isProcessing}
           activeProcessorId={activeProcessorId}
           failedProcessorIds={failedProcessorIds}
+          timedOutProcessorIds={timedOutProcessorIds}
           activityIndicatorColor="#007AFF"
         />
       </View>
@@ -347,18 +356,21 @@ You can keep the SDK's modal and backdrop while customizing only the processor r
   onCancel={cancelSelection}
   isProcessing={isProcessing}
   activeProcessorId={activeProcessorId}
+  failedProcessorIds={failedProcessorIds}
+  timedOutProcessorIds={timedOutProcessorIds}
   activityIndicatorColor="#007AFF"
   presentation="fullscreen"
   backgroundColor="blue"
-  renderItem={({ processor, onSelect, isLoading, isFailed }) => (
+  renderItem={({ processor, onSelect, isLoading, isFailed, isTimedOut }) => (
     <TouchableOpacity
       onPress={onSelect}
-      disabled={isLoading || isFailed}
-      style={{ opacity: isFailed ? 0.4 : isLoading ? 0.6 : 1 }}
+      disabled={isLoading || (isFailed && !isTimedOut)}
+      style={{ opacity: isFailed && !isTimedOut ? 0.4 : isLoading ? 0.6 : 1 }}
     >
       <Text>
         {processor.type.toUpperCase()}
-        {isFailed && ' — Unavailable'}
+        {isFailed && !isTimedOut && ' — Unavailable'}
+        {isTimedOut && ' — Timed out'}
       </Text>
       {isLoading && <ActivityIndicator color="#007AFF" />}
     </TouchableOpacity>
@@ -368,7 +380,7 @@ You can keep the SDK's modal and backdrop while customizing only the processor r
 
 ### Custom selector row with `renderItem` (React web)
 
-The web `PaymentProcessorSelector` does not have a loading phase — the popup opens immediately after selection, so `renderItem` receives `processor`, `onSelect`, and `isFailed` only:
+The web `PaymentProcessorSelector` does not have a loading phase — the popup opens immediately after selection, so `renderItem` receives `processor`, `onSelect`, `isFailed`, and `isTimedOut` only:
 
 ```tsx
 <PaymentProcessorSelector
@@ -377,10 +389,12 @@ The web `PaymentProcessorSelector` does not have a loading phase — the popup o
   onSelect={selectProcessor}
   onCancel={cancelSelection}
   failedProcessorIds={failedProcessorIds}
-  renderItem={({ processor, onSelect, isFailed }) => (
-    <button onClick={onSelect} disabled={isFailed} style={{ opacity: isFailed ? 0.4 : 1 }}>
+  timedOutProcessorIds={timedOutProcessorIds}
+  renderItem={({ processor, onSelect, isFailed, isTimedOut }) => (
+    <button onClick={onSelect} disabled={isFailed && !isTimedOut} style={{ opacity: isFailed && !isTimedOut ? 0.4 : 1 }}>
       {processor.type.toUpperCase()}
-      {isFailed && ' — Unavailable'}
+      {isFailed && !isTimedOut && ' — Unavailable'}
+      {isTimedOut && ' — Timed out'}
     </button>
   )}
 />
@@ -408,6 +422,7 @@ function Checkout() {
     isSelecting,
     isProcessing,
     failedProcessorIds,
+    timedOutProcessorIds,
   } = usePayment(request);
   const { processors } = usePaymentProcessors();
 
@@ -436,14 +451,16 @@ function Checkout() {
           <h2>Select a payment method</h2>
           {processors.map((processor) => {
             const isFailed = failedProcessorIds.includes(processor.id);
+            const isTimedOut = timedOutProcessorIds.includes(processor.id);
             return (
               <button
                 key={processor.id}
                 onClick={() => selectProcessor(processor.id)}
-                disabled={isFailed}
+                disabled={isFailed && !isTimedOut}
               >
                 {processor.type.toUpperCase()}
-                {isFailed ? ' — Unavailable' : ''}
+                {isFailed && !isTimedOut ? ' — Unavailable' : ''}
+                {isTimedOut ? ' — Timed out' : ''}
               </button>
             );
           })}
@@ -469,6 +486,7 @@ For React Native, if you build your own selector component, use `showProcessorSe
   activeProcessorId={activeProcessorId}
   isProcessing={isProcessing}
   failedProcessorIds={failedProcessorIds}
+  timedOutProcessorIds={timedOutProcessorIds}
   visible={showProcessorSelector}
 />
 ```
@@ -490,6 +508,7 @@ For React Native, if you build your own selector component, use `showProcessorSe
 | `error` | `Error \| null` | Last error, if any. |
 | `CheckoutView` | `React.ReactNode` | Render this to show the checkout WebView. |
 | `reset` | `() => void` | Resets the payment state. |
+| `timedOutProcessorIds` | `string[]` | IDs of processors whose initialization timed out. Unlike failed processors, these can be retried in the same payment attempt. |
 | `processors` | `ProcessorConfig[]` | All configured processors. |
 | `defaultProcessor` | `ProcessorConfig \| undefined` | The processor marked as default, if any. |
 
@@ -651,9 +670,11 @@ const config = {
 
 If you configure multiple processors and the default processor's checkout fails to load or initialize, the SDK automatically falls back to the processor selector so the user can choose another processor. The failed processor is shown as **Unavailable** and is disabled for the rest of the current payment attempt.
 
-The fallback clears when the user starts a new payment (for example, by tapping Pay again).
+If initialization takes too long (default 20 seconds), the processor is shown as **Timed out** but remains selectable — the user can try it again without restarting the whole flow. Customize the timeout with `initializeTimeoutMs` in the config.
 
-If only one processor is configured and it fails, the SDK ends the flow and reports a failed payment.
+The fallback and timeout lists clear when the user starts a new payment (for example, by tapping Pay again).
+
+If only one processor is configured and it fails or times out, the SDK ends the flow and reports a failed payment.
 
 ## Callback URL matching
 

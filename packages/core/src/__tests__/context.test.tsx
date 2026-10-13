@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { PaymentGatewayProvider, usePaymentContext } from '../context';
 import type { PaymentGatewayConfig, PaymentRequest, PaymentResponse } from '../types';
 
@@ -67,6 +67,8 @@ const baseConfig: PaymentGatewayConfig = {
 };
 
 describe('PaymentGatewayProvider', () => {
+  afterEach(() => cleanup());
+
   it('should throw on duplicate defaults', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() =>
