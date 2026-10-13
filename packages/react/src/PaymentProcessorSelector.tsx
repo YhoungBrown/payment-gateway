@@ -8,10 +8,12 @@ interface PaymentProcessorSelectorProps {
   onCancel: () => void;
   title?: string;
   failedProcessorIds?: string[];
+  timedOutProcessorIds?: string[];
   renderItem?: (props: {
     processor: ProcessorConfig;
     onSelect: () => void;
     isFailed: boolean;
+    isTimedOut: boolean;
   }) => React.ReactNode;
 }
 
@@ -22,6 +24,7 @@ export function PaymentProcessorSelector({
   onCancel,
   title = 'Select a payment method',
   failedProcessorIds = [],
+  timedOutProcessorIds = [],
   renderItem,
 }: PaymentProcessorSelectorProps) {
   if (!open) return null;
@@ -54,12 +57,14 @@ export function PaymentProcessorSelector({
         <div>
           {processors.map((processor) => {
             const isFailed = failedProcessorIds.includes(processor.id);
+            const isTimedOut = timedOutProcessorIds.includes(processor.id);
             return renderItem ? (
               <div key={processor.id}>
                 {renderItem({
                   processor,
                   onSelect: () => onSelect(processor.id),
                   isFailed,
+                  isTimedOut,
                 })}
               </div>
             ) : (
@@ -68,6 +73,7 @@ export function PaymentProcessorSelector({
                 processor={processor}
                 onSelect={() => onSelect(processor.id)}
                 isFailed={isFailed}
+                isTimedOut={isTimedOut}
               />
             );
           })}

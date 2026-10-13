@@ -48,6 +48,11 @@ export interface InitializeResult {
 export interface PaymentGatewayConfig {
   processors: ProcessorConfig[];
   debug?: boolean;
+  /**
+   * Maximum time (in milliseconds) to wait for a processor to return a checkout URL
+   * during initialization. Defaults to 20_000 ms when not provided.
+   */
+  initializeTimeoutMs?: number;
   initialize?: (
     request: PaymentRequest,
     processor: ProcessorConfig
@@ -67,6 +72,7 @@ export interface UsePaymentResult {
   hasActiveProcessorId: boolean;
   wasCheckoutMounted?: boolean;
   failedProcessorIds: string[];
+  timedOutProcessorIds: string[];
   response?: PaymentResponse;
   error: Error | null;
   reset: () => void;
