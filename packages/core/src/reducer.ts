@@ -1,10 +1,12 @@
 import type { PaymentResponse, ProcessorConfig } from './types';
+import type { PaymentAction } from './types/actions';
 
 export interface PaymentState {
   processors: ProcessorConfig[];
   defaultProcessor: ProcessorConfig | undefined;
   activeProcessorId?: string;
   failedProcessorIds: string[];
+  timedOutProcessorIds: string[];
   transaction: {
     status:
       | 'idle'
@@ -20,25 +22,11 @@ export interface PaymentState {
   };
 }
 
-export type PaymentAction =
-  | { type: 'START_PAYMENT' }
-  | { type: 'SHOW_SELECTOR' }
-  | { type: 'SELECT_PROCESSOR'; payload: { processorId: string } }
-  | { type: 'CANCEL_SELECTION' }
-  | { type: 'CHECKOUT_INITIALIZED' }
-  | { type: 'CALLBACK_RECEIVED'; payload: { response: PaymentResponse } }
-  | { type: 'VERIFICATION_COMPLETE'; payload: { response: PaymentResponse } }
-  | { type: 'PAYMENT_ERROR'; payload: { error: Error } }
-  | {
-      type: 'PROCESSOR_FAILED';
-      payload: { processorId: string; showSelector: boolean };
-    }
-  | { type: 'RESET' };
-
 export const initialState: PaymentState = {
   processors: [],
   defaultProcessor: undefined,
   failedProcessorIds: [],
+  timedOutProcessorIds: [],
   transaction: { status: 'idle' },
 };
 
@@ -52,6 +40,7 @@ export function paymentReducer(
         ...state,
         activeProcessorId: undefined,
         failedProcessorIds: [],
+        timedOutProcessorIds: [],
         transaction: { status: 'initializing' },
       };
     case 'SHOW_SELECTOR':
@@ -110,6 +99,29 @@ export function paymentReducer(
         transaction: action.payload.showSelector
           ? { status: 'selecting' }
           : { status: 'error', error: new Error('Processor unavailable') },
+      };
+    }
+    case 'PROCESSOR_TIMED_OUT': {
+      const timedOutProcessorIds = Array.from(
+        new Set([...state.timedOutProcessorIds, action.payload.processorId])
+      );
+      return {
+        ...state,
+        activeProcessorId: undefined,
+        timedOutProcessorIds,
+        transaction: action.payload.showSelector
+          ? {
+              status: 'selecting',
+              error: new Error(
+                `Processor timed out after ${action.payload.timeoutMs}ms`
+              ),
+            }
+          : {
+              status: 'error',
+              error: new Error(
+                `Processor timed out after ${action.payload.timeoutMs}ms`
+              ),
+            },
       };
     }
     case 'RESET':

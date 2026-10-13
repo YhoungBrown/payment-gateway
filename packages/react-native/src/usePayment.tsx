@@ -22,10 +22,13 @@ export function usePayment(request: PaymentRequest) {
   const wasCheckoutMountedRef = useRef(false);
 
   const processor = useMemo(() => {
-    return (
-      state.defaultProcessor ||
-      state.processors.find((p) => p.id === state.activeProcessorId)
-    );
+    // When a user manually selects a processor (e.g. after the default
+    // processor failed), activeProcessorId takes priority so the correct
+    // adapter and callback URL are used in the checkout WebView.
+    if (state.activeProcessorId) {
+      return state.processors.find((p) => p.id === state.activeProcessorId);
+    }
+    return state.defaultProcessor;
   }, [state]);
 
   const finalizeCheckout = useCallback((response: PaymentResponse) => {
@@ -150,6 +153,7 @@ export function usePayment(request: PaymentRequest) {
         hasActiveProcessorId,
         wasCheckoutMounted: wasCheckoutMountedRef.current,
         failedProcessorIds: state.failedProcessorIds,
+        timedOutProcessorIds: state.timedOutProcessorIds,
         response: lastResponse,
         error: lastError,
         reset,
@@ -163,6 +167,7 @@ export function usePayment(request: PaymentRequest) {
       state.transaction.status,
       state.activeProcessorId,
       state.failedProcessorIds,
+      state.timedOutProcessorIds,
       lastResponse,
       lastError,
       reset,
