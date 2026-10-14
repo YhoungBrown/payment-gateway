@@ -21,6 +21,25 @@
   "files": [
     "dist"
   ],
+  "keywords": [
+    "payment",
+    "payment-gateway",
+    "paystack",
+    "flutterwave",
+    "interswitch",
+    "conitepay",
+    "react-native",
+    "webview",
+    "javascript",
+    "typescript",
+    "gateway",
+    "payment gateway",
+    "mobile",
+    "checkout"
+  ],
+  "publishConfig": {
+    "provenance": true
+  },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
