@@ -1,5 +1,7 @@
 # @conitepay/react
 
+> **Full docs and examples:** [github.com/YhoungBrown/payment-gateway](https://github.com/YhoungBrown/payment-gateway)
+
 React bindings for the ConitePay payment gateway. Opens checkout in a popup window. It abstracts Paystack, Flutterwave, and Interswitch behind a single `pay()` API.
 
 It delegates all processor API calls to your own backend through `initialize` and `verify` callbacks, so secret keys never ship in the client.

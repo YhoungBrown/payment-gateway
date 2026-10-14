@@ -12,12 +12,14 @@
     "test:e2e": "npx playwright test",
     "lint": "eslint packages --ext .ts,.tsx",
     "typecheck": "npm run typecheck --workspaces",
-    "clean": "npm run clean --workspaces"
+    "clean": "npm run clean --workspaces",
+    "publish-packages": "npm run build --workspaces && changeset publish"
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.3",
+    "@playwright/test": "^1.45.0",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.0",
-    "@playwright/test": "^1.45.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
