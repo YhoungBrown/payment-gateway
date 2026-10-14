@@ -64,15 +64,10 @@ Peer dependencies:
 
 ### React Native setup
 
-Install the peer dependency in your app and run the native build steps:
-
 ```bash
-npm install react-native-webview
 # iOS only
 npx pod-install
 ```
-
-> Do not skip these. They are peer dependencies, not bundled dependencies. Bundling them would create duplicate native modules and build failures.
 
 ## React usage
 
