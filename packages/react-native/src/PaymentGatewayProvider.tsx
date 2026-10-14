@@ -2,7 +2,7 @@ import React from 'react';
 import {
   PaymentGatewayProvider as CoreProvider,
   type PaymentGatewayProviderProps,
-} from '@org/payment-gateway-core';
+} from '@conitepay/core';
 
 export function PaymentGatewayProvider({
   config,

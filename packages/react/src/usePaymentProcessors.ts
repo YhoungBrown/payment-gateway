@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import {
   usePaymentContext,
   type UsePaymentProcessorsResult,
-} from '@org/payment-gateway-core';
+} from '@conitepay/core';
 
 export function usePaymentProcessors(): UsePaymentProcessorsResult {
   const { state } = usePaymentContext();

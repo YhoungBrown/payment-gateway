@@ -1,4 +1,4 @@
-# @org/payment-gateway
+# @conitepay payment-gateway
 
 A TypeScript monorepo payment package for React and React Native. It abstracts Paystack, Flutterwave, and Interswitch behind a single `pay()` API.
 
@@ -6,9 +6,9 @@ It delegates all processor API calls to your own backend through `initialize` an
 
 ## Packages
 
-- `@org/payment-gateway-core` — shared types, adapters, context, and reducer.
-- `@org/payment-gateway-react` — React bindings (popup checkout).
-- `@org/payment-gateway-react-native` — React Native bindings (WebView checkout).
+- `@conitepay/core` — shared types, adapters, context, and reducer.
+- `@conitepay/react` — React bindings (popup checkout).
+- `@conitepay/react-native` — React Native bindings (WebView checkout).
 
 ## Example applications
 
@@ -52,9 +52,9 @@ if (processor.type === 'flutterwave') {
 ## Installation
 
 ```bash
-npm install @org/payment-gateway-react
+npm install @conitepay/react
 # or
-npm install @org/payment-gateway-react-native
+npm install @conitepay/react-native react-native-webview
 ```
 
 Peer dependencies:
@@ -82,7 +82,7 @@ import {
   usePayment,
   usePaymentProcessors,
   PaymentProcessorSelector,
-} from '@org/payment-gateway-react';
+} from '@conitepay/react';
 
 const config = {
   // Remove `debug: true` in production — it enables verbose logging for development only.
@@ -171,7 +171,7 @@ import {
   usePayment,
   usePaymentProcessors,
   PaymentProcessorSelector,
-} from '@org/payment-gateway-react-native';
+} from '@conitepay/react-native';
 import { Button, Text, View } from 'react-native';
 
 const config = {
@@ -261,7 +261,7 @@ import {
   withPaymentGateway,
   PaymentProcessorSelector,
   type WithPaymentGatewayProps,
-} from '@org/payment-gateway-react-native';
+} from '@conitepay/react-native';
 
 class CheckoutScreen extends Component<WithPaymentGatewayProps> {
   render() {

@@ -3,7 +3,7 @@ import {
   type InitializeResult,
   type PaymentResponse,
   type ProcessorConfig,
-} from '@org/payment-gateway-core';
+} from '@conitepay/core';
 
 export async function launchCheckoutPopup(
   result: InitializeResult,

@@ -3,7 +3,7 @@ import type {
   PaymentRequest,
   UsePaymentResult,
   UsePaymentProcessorsResult,
-} from '@org/payment-gateway-core';
+} from '@conitepay/core';
 import { usePayment } from './usePayment';
 import { usePaymentProcessors } from './usePaymentProcessors';
 
