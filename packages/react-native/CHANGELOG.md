@@ -1,5 +1,13 @@
 # @conitepay/react-native
 
+## 0.1.3
+
+### Patch Changes
+
+- 401b028: Add package keywords and enable npm provenance for future publishes.
+- Updated dependencies [401b028]
+  - @conitepay/core@0.1.4
+
 ## 0.1.2
 
 ### Patch Changes

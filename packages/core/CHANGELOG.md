@@ -1,5 +1,11 @@
 # @conitepay/core
 
+## 0.1.4
+
+### Patch Changes
+
+- 401b028: Add package keywords and enable npm provenance for future publishes.
+
 ## 0.1.3
 
 ### Patch Changes
