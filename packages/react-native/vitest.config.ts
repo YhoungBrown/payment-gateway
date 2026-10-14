@@ -11,7 +11,7 @@ export default defineConfig({
       'react-dom': path.resolve(__dirname, '../../node_modules/react-dom'),
       // Use the core source directly in tests so it shares the same React
       // instance as this package.
-      '@org/payment-gateway-core': path.resolve(__dirname, '../core/src/index.ts'),
+      '@conitepay/core': path.resolve(__dirname, '../core/src/index.ts'),
     },
   },
   test: {

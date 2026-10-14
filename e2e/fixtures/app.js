@@ -5,7 +5,7 @@ import {
   usePayment,
   usePaymentProcessors,
   PaymentProcessorSelector,
-} from '@org/payment-gateway-react';
+} from '@conitepay/react';
 
 function App() {
   const request = {

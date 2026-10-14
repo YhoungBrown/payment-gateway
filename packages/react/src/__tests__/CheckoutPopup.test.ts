@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { launchCheckoutPopup } from '../checkout/CheckoutPopup';
-import type { ProcessorConfig } from '@org/payment-gateway-core';
+import type { ProcessorConfig } from '@conitepay/core';
 
 function createPopup(initialUrl: string) {
   const listeners = new Map<string, EventListener>();

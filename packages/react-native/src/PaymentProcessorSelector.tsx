@@ -7,7 +7,7 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
-import type { ProcessorConfig } from '@org/payment-gateway-core';
+import type { ProcessorConfig } from '@conitepay/core';
 import { DefaultProcessorItem } from './components/DefaultProcessorItem';
 
 export type PaymentProcessorSelectorPresentation = 'modal' | 'fullscreen';

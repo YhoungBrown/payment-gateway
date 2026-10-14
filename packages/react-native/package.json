@@ -1,7 +1,12 @@
 {
-  "name": "@org/payment-gateway-react-native",
-  "version": "0.1.0",
+  "name": "@conitepay/react-native",
+  "version": "0.1.1",
   "description": "React Native bindings for the payment gateway",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YhoungBrown/payment-gateway.git",
+    "directory": "packages/react-native"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -28,7 +33,7 @@
     "react-native-webview": ">=13.0.0"
   },
   "dependencies": {
-    "@org/payment-gateway-core": "file:../core"
+    "@conitepay/core": "^0.1.2"
   },
   "devDependencies": {
     "@testing-library/react": "^16.0.0",

@@ -5,7 +5,7 @@ import {
   type PaymentRequest,
   type PaymentResponse,
   type ProcessorConfig,
-} from '@org/payment-gateway-core';
+} from '@conitepay/core';
 import { launchCheckoutPopup } from './checkout/CheckoutPopup';
 
 export function usePayment(request: PaymentRequest) {
