@@ -13,7 +13,7 @@ import {
   type InitializeResult,
   type PaymentResponse,
   type ProcessorConfig,
-} from '@org/payment-gateway-core';
+} from '@conitepay/core';
 
 interface CheckoutWebViewProps {
   result: InitializeResult;
