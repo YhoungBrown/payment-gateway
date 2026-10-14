@@ -7,5 +7,5 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   clean: true,
-  external: ['react', 'react-dom', '@org/payment-gateway-core'],
+  external: ['react', 'react-dom', '@conitepay/core'],
 });

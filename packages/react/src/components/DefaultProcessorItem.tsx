@@ -1,4 +1,4 @@
-import type { ProcessorConfig } from '@org/payment-gateway-core';
+import type { ProcessorConfig } from '@conitepay/core';
 
 interface DefaultProcessorItemProps {
   processor: ProcessorConfig;

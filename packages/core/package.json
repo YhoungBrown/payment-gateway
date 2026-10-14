@@ -1,7 +1,12 @@
 {
-  "name": "@org/payment-gateway-core",
-  "version": "0.1.0",
+  "name": "@conitepay/core",
+  "version": "0.1.2",
   "description": "Core types, adapters, and state management for the payment gateway",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YhoungBrown/payment-gateway.git",
+    "directory": "packages/core"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

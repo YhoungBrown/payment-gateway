@@ -1,4 +1,4 @@
-export * from '@org/payment-gateway-core';
+export * from '@conitepay/core';
 export { PaymentGatewayProvider } from './PaymentGatewayProvider';
 export { usePayment } from './usePayment';
 export { usePaymentProcessors } from './usePaymentProcessors';
