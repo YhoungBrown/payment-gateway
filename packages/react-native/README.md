@@ -22,8 +22,6 @@ For iOS, run `npx pod-install` after installing.
 - `react-native` >= 0.72.0
 - `react-native-webview` >= 13.0.0
 
-These are peer dependencies, not bundled dependencies. Bundling them would create duplicate native modules and build failures.
-
 ## Features
 
 - Single `pay()` entry point.
