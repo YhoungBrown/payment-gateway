@@ -70,15 +70,15 @@ export async function launchCheckoutPopup(
           cleanup();
 
           // If the popup closed without ever reaching the callback URL,
-          // the checkout failed to load (e.g. processor is down with 503).
-          // Report it as failed so the SDK can mark the processor as
-          // unavailable and reopen the selector.
+          // the user intentionally closed the window. Report it as cancelled
+          // so the SDK reopens the selector without marking the processor
+          // as unavailable.
           if (!reachedCallback) {
             resolve({
-              status: 'failed',
+              status: 'cancelled',
               reference: '',
               processor: processor.type,
-              message: 'Checkout failed to load',
+              message: 'Checkout window closed by user',
             });
             return;
           }

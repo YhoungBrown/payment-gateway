@@ -4,4 +4,4 @@
 "@conitepay/react-native": patch
 ---
 
-Simplified React Native installation instructions and introduced changeset to the sdk.
+Add package keywords and enable npm provenance for future publishes.
