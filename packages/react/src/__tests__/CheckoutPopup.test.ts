@@ -88,7 +88,7 @@ describe('launchCheckoutPopup', () => {
     expect(popup.close).toHaveBeenCalledOnce();
   });
 
-  it('returns failed when the popup closes without ever reaching the callback URL', async () => {
+  it('returns cancelled when the popup closes without ever reaching the callback URL', async () => {
     vi.useFakeTimers();
     const callbackUrl = 'https://shop.example.com/callback';
     const processor: ProcessorConfig = {
@@ -110,7 +110,7 @@ describe('launchCheckoutPopup', () => {
     await vi.advanceTimersByTimeAsync(0);
 
     await expect(payment).resolves.toMatchObject({
-      status: 'failed',
+      status: 'cancelled',
       processor: 'paystack',
     });
   });
