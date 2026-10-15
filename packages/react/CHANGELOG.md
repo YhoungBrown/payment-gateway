@@ -1,5 +1,13 @@
 # @conitepay/react
 
+## 0.1.3
+
+### Patch Changes
+
+- 3ab5e98: removed secret test key from history and fix web cancelation bug
+- Updated dependencies [3ab5e98]
+  - @conitepay/core@0.1.4
+
 ## 0.1.2
 
 ### Patch Changes
