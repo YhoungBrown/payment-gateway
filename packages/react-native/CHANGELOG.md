@@ -1,5 +1,13 @@
 # @conitepay/react-native
 
+## 0.1.4
+
+### Patch Changes
+
+- 039d7db: fix web popup cancellation incorrectly marking processor as unavailable when user closes the checkout window
+- Updated dependencies [039d7db]
+  - @conitepay/core@0.1.5
+
 ## 0.1.3
 
 ### Patch Changes
