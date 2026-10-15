@@ -1,5 +1,11 @@
 # @conitepay/core
 
+## 0.1.5
+
+### Patch Changes
+
+- 039d7db: fix web popup cancellation incorrectly marking processor as unavailable when user closes the checkout window
+
 ## 0.1.4
 
 ### Patch Changes
