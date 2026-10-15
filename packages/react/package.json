@@ -1,6 +1,6 @@
 {
   "name": "@conitepay/react",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "React bindings for the payment gateway",
   "repository": {
     "type": "git",
@@ -52,7 +52,7 @@
     "react-dom": ">=18.0.0"
   },
   "dependencies": {
-    "@conitepay/core": "^0.1.5"
+    "@conitepay/core": "^0.1.6"
   },
   "devDependencies": {
     "@testing-library/react": "^16.0.0",
