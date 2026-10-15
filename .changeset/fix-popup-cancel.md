@@ -4,4 +4,4 @@
 "@conitepay/react-native": patch
 ---
 
-updated the workflow trying to fix republish bug
+fix web popup cancellation incorrectly marking processor as unavailable when user closes the checkout window up, updated the workflow trying to fix republish bug
