@@ -19,10 +19,10 @@ jobs:
 
       - name: Find and merge Version Packages PR
         run: |
-          PR=$(gh pr list --state open --search "chore: version packages" --author "github-actions[bot]" --json number,url --jq '.[0].url')
+          PR=$(gh pr list --state open --head changeset-release/master --json number,url --jq '.[0].url')
           if [ -n "$PR" ]; then
             echo "Merging $PR"
-            gh pr merge --squash --delete-branch "$PR"
+            gh pr merge --merge --delete-branch "$PR"
           else
             echo "No Version Packages PR found - nothing to merge."
           fi
