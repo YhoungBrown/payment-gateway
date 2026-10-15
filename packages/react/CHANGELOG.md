@@ -1,5 +1,13 @@
 # @conitepay/react
 
+## 0.1.5
+
+### Patch Changes
+
+- 039d7db: fix web popup cancellation incorrectly marking processor as unavailable when user closes the checkout window up, updated the workflow trying to fix republish bug
+- Updated dependencies [039d7db]
+  - @conitepay/core@0.1.6
+
 ## 0.1.4
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@conitepay/react-native",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "React Native bindings for the payment gateway",
   "repository": {
     "type": "git",
@@ -52,7 +52,7 @@
     "react-native-webview": ">=13.0.0"
   },
   "dependencies": {
-    "@conitepay/core": "^0.1.5"
+    "@conitepay/core": "^0.1.6"
   },
   "devDependencies": {
     "@testing-library/react": "^16.0.0",
