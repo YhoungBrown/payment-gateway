@@ -1,0 +1,32 @@
+{
+  "rewrites": [
+    {
+      "source": "/callback",
+      "destination": "https://paymentgateway-example-backend.vercel.app/callback"
+    },
+    {
+      "source": "/payment-response",
+      "destination": "https://paymentgateway-example-backend.vercel.app/payment-response"
+    },
+    {
+      "source": "/flutterwave-callback",
+      "destination": "https://paymentgateway-example-backend.vercel.app/flutterwave-callback"
+    },
+    {
+      "source": "/initialize",
+      "destination": "https://paymentgateway-example-backend.vercel.app/initialize"
+    },
+    {
+      "source": "/verify",
+      "destination": "https://paymentgateway-example-backend.vercel.app/verify"
+    },
+    {
+      "source": "/verify-flutterwave",
+      "destination": "https://paymentgateway-example-backend.vercel.app/verify-flutterwave"
+    },
+    {
+      "source": "/verify-interswitch",
+      "destination": "https://paymentgateway-example-backend.vercel.app/verify-interswitch"
+    }
+  ]
+}

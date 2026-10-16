@@ -1,0 +1,150 @@
+.app-container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #1a1a1a;
+}
+
+.backend-info {
+  background: #fff3cd;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #ffecb5;
+  margin-bottom: 16px;
+}
+
+.backend-info label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.backend-info code {
+  font-size: 13px;
+  color: #856404;
+  word-break: break-all;
+}
+
+.payment-screen h1 {
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 24px;
+}
+
+.input-group {
+  margin-bottom: 16px;
+}
+
+.input-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 16px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.info-box {
+  background: #e9ecef;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.info-box p {
+  font-size: 13px;
+  color: #333;
+  margin: 4px 0;
+}
+
+.pay-button {
+  width: 100%;
+  padding: 16px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  background: #007aff;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+
+.pay-button:disabled {
+  background: #99caff;
+  cursor: not-allowed;
+}
+
+.error-box {
+  background: #ffebee;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.error-box p {
+  color: #c62828;
+  font-size: 14px;
+  margin: 0;
+}
+
+.success-box {
+  background: #e8f5e9;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.success-box p {
+  color: #2e7d32;
+  font-size: 14px;
+  margin: 0;
+}
+
+.log-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #999;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.log-box {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e9ecef;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.log-empty {
+  font-size: 14px;
+  color: #999;
+  font-style: italic;
+  margin: 0;
+}
+
+.log-line {
+  font-size: 12px;
+  color: #333;
+  margin-bottom: 6px;
+  font-family: monospace;
+}
