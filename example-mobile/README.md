@@ -10,10 +10,40 @@ cd example-mobile
 npm install
 ```
 
+### Environment variables
+
+This project uses `react-native-dotenv` to load environment variables at build time. The `.env` file is gitignored and is never committed, so you must create it locally from the provided example:
+
+```bash
+cp env.example .env
+```
+
+Or on Windows:
+
+```cmd
+copy env.example .env
+```
+
+you can do it manually as well, copy the content of `env.example` , create a new file called `.env` and past the copied data into it
+
 ### iOS only
 
 ```bash
 cd ios && pod install && cd ..
+```
+
+### Android SDK
+
+Gradle needs to know where your Android SDK is installed. Set the `ANDROID_HOME` environment variable, or create `android/local.properties` with your SDK path:
+
+```properties
+sdk.dir=C:\\Users\\<YourUser>\\AppData\\Local\\Android\\Sdk
+```
+
+On macOS/Linux:
+
+```properties
+sdk.dir=/Users/<YourUser>/Library/Android/sdk
 ```
 
 ## Configuration
@@ -24,12 +54,12 @@ Edit `.env` with your Interswitch sandbox credentials. The `.env` file is gitign
 
 ```env
 INTERSWITCH_ENDPOINT=https://sandbox.interswitchng.com/collections/w/pay
-INTERSWITCH_MERCHANT_CODE=your_merchant_code
-INTERSWITCH_PAY_ITEM_ID=your_pay_item_id
-INTERSWITCH_PAY_ITEM_NAME=Your Product Name
+INTERSWITCH_MERCHANT_CODE=MX6072
+INTERSWITCH_PAY_ITEM_ID=9405967
+INTERSWITCH_PAY_ITEM_NAME=conitepay mobile test app
 ```
 
-Get these from your Interswitch dashboard.
+Get production credentials from your Interswitch dashboard. The example values above are public sandbox samples.
 
 ### Backend
 
